@@ -103,9 +103,6 @@ class iRecorder(Process):
         elif self.sock_args["interface"] == "UWB":
             from device_socket import uwb_socket as device_socket
             from physical_interface import com_util as interface
-        elif self.sock_args["interface"] == "virtual":
-            from device_socket import virtual_socket as device_socket
-            from physical_interface import vir_util as interface
 
         def _clear_queue(data: queue.Queue) -> None:
             data.put(None)
