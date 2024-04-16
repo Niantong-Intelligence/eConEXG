@@ -12,8 +12,7 @@ class conn(Thread):
     def __init__(self, device_queue: Queue, device_config):
         super().__init__(daemon=True)
         self.device_queue = device_queue
-        self.__device_config = device_config
-        self.__device_config["port"] = 4321
+        self.port = 4321
 
     def _find_interface(self):
         out = subprocess.check_output(["networksetup", "-listallhardwareports"])
@@ -35,7 +34,7 @@ class conn(Thread):
         gateways = netifaces.gateways()
         for ips in gateways[netifaces.AF_INET]:
             if ips[1] == self.iface:
-                self.__device_config["host"] = ips[0]
+                return ips[0]
 
     def run(self):
         try:
@@ -58,7 +57,7 @@ class conn(Thread):
                 continue
             if ssid not in added_devices:
                 added_devices.add(ssid)
-                self.device_queue.put([ssid, "", "1"])
+                self.device_queue.put([ssid, "", ssid])
 
     def stop(self):
         if self.child_process.poll() is None:
@@ -73,8 +72,9 @@ class conn(Thread):
         result = subprocess.check_output(command)
         result = result.decode(locale.getpreferredencoding())
         if result.split(":")[1].strip() == ssid:
-            self._get_default_gateway()
-            return True
+            host = self._get_default_gateway()
+            if host:
+                return (host, self.port)
         # connect
         command = ["networksetup", "-setairportnetwork", self.iface, ssid]
         self.child_process = subprocess.Popen(command, stdout=subprocess.PIPE)
@@ -82,8 +82,9 @@ class conn(Thread):
         # process.wait()
         result = out.decode(locale.getpreferredencoding())
         if not result:
-            self._get_default_gateway()
-            return True
+            host = self._get_default_gateway()
+            if host:
+                return (host, self.port)
         else:
             self.device_queue.put(result)
             return False

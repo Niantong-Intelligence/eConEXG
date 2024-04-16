@@ -7,7 +7,6 @@ class conn(Thread):
     def __init__(self, device_queue: Queue, device_config):
         super().__init__(daemon=True)
         self.device_queue = device_queue
-        self.__device_config = device_config
         self.__search_flag = True
 
     def run(self):
@@ -22,7 +21,7 @@ class conn(Thread):
                 name = device.device
                 if name not in added_devices:
                     added_devices.add(name)
-                    self.device_queue.put([name, "iRecorder32-Line", "1"])
+                    self.device_queue.put([ f"iRe-{device.serial_number}",name, name])
 
     def stop(self):
         self.__search_flag = False
@@ -31,5 +30,4 @@ class conn(Thread):
         self.__search_flag = False
         if port == "":
             return False
-        self.__device_config["port"] = port
         return port

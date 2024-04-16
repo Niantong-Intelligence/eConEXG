@@ -35,7 +35,7 @@ class conn(Thread):
                         continue
                 if name not in added_devices:
                     added_devices.add(name)
-                    self.device_queue.put([addr, name, "1"])
+                    self.device_queue.put([name, addr, addr])
 
     def stop(self):
         self.__search_flag = False
@@ -52,4 +52,4 @@ class conn(Thread):
             return None
         device = service_matches[0]
         print("bluetooth connected!")
-        return (device["host"],device["port"])
+        return (device["host"], device["port"])

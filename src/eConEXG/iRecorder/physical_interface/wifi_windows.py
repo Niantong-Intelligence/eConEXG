@@ -12,8 +12,7 @@ class conn(Thread):
     def __init__(self, device_queue: Queue, device_config):
         super().__init__(daemon=True)
         self.device_queue = device_queue
-        self.__device_config = device_config
-        self.__device_config["port"] = 4321
+        self.port = 4321
         self.__search_flag = True
         self.__interface = None
 
@@ -80,9 +79,9 @@ class conn(Thread):
         if ssid == "":
             return False
         if self._get_connected_wifi_name() == ssid:  # return if connected
-            self.__device_config["host"] = self._get_default_gateway()
-            if self.__device_config["host"] is not None:
-                return True
+            host = self._get_default_gateway()
+            if host is not None:
+                return (host, self.port)
         self.__interface.disconnect()
         time.sleep(2)
         profile = pywifi.Profile()
@@ -93,9 +92,9 @@ class conn(Thread):
             time.sleep(0.5 * (i + 1))
             if self.__interface.status() == pywifi.const.IFACE_CONNECTED:
                 time.sleep(1)
-                self.__device_config["host"] = self._get_default_gateway()
-                if self.__device_config["host"] is not None:
-                    return True
+                host = self._get_default_gateway()
+                if host is not None:
+                    return (host, self.port)
                 else:
                     break
             print("...Retry connecting:", i + 1)

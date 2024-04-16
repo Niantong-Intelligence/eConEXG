@@ -1,4 +1,5 @@
 import time
+import queue
 import traceback
 from multiprocessing import Process, Queue, Value, Event
 
@@ -13,33 +14,41 @@ TERMINATE_START = 101
 
 
 class iRecorder(Process):
-    def __init__(self, sock_args: dict, socket_flag: Value):  # type: ignore
+    def __init__(self, sock_args: dict, ):  # type: ignore
         print("initing iRecorder")
         Process.__init__(self, daemon=True, name="Data collect")
+
         self.sock_args = sock_args
         self.device_queue = Queue(128)
-        self._socket_flag = socket_flag
+        self._socket_flag = Value("i", 0)
         self._save_data = Queue()
         self._status = Value("i", TERMINATE)
         self.__battery = Value("i", -1)
         self.__halt_flag = Event()
 
-    def get_conn_addr(self, addr):
+    def connect_dev(self, addr):
         if not self.__halt_flag.is_set():
             self._save_data.put(addr)
             self.__halt_flag.set()
 
-    def start_acquisition_data(self):
+    def start_acquisition_data(self) -> None | True:
         if self._status.value == TERMINATE:
             return
         self._status.value = SIGNAL_START
         while self._status.value not in [SIGNAL, TERMINATE]:
             time.sleep(0.01)
+        if self._status.value == SIGNAL:
+            return True
 
     def get_data(self):
+        if self._socket_flag.value != 2:
+            raise Exception(f"{self.get_sock_error()}")
         data = []
-        while not self._save_data.empty():
-            data.extend(self._save_data.get())
+        while True:
+            try:
+                data.extend(self._save_data.get(block=False))
+            except queue.Empty:
+                break
         return data
 
     def stop_acquisition(self):
@@ -49,17 +58,24 @@ class iRecorder(Process):
         while self._status.value not in [IDLE, TERMINATE]:
             time.sleep(0.01)
 
-    def start_acquisition_impedance(self):
+    def start_acquisition_impedance(self) -> None | True:
         if self._status.value == TERMINATE:
             return
         self._status.value = IMPEDANCE_START
         while self._status.value not in [IMPEDANCE, TERMINATE]:
             time.sleep(0.01)
+        if self._status.value == IMPEDANCE:
+            return True
 
-    def get_impedance(self):
+    def get_impedance(self) -> list:
+        if self._socket_flag.value != 2:
+            raise Exception(f"{self.get_sock_error()}")
         data = []
-        while not self._save_data.empty():
-            data = self._save_data.get()
+        while True:
+            try:
+                data = self._save_data.get(block=False)
+            except queue.Empty:
+                break
         return data
 
     def close_dev(self):
@@ -68,7 +84,6 @@ class iRecorder(Process):
             self._status.value = TERMINATE_START
             while self._status.value != TERMINATE:
                 time.sleep(0.01)
-        self._socket_flag.value = 0
         print("iRecorder disconnected")
         self.join()
 
@@ -100,7 +115,6 @@ class iRecorder(Process):
         elif self.sock_args["interface"] == "COM":
             from .device_socket import com_socket as device_socket
             from .physical_interface import com_util as interface
-
 
         def _clear_queue(data: queue.Queue) -> None:
             data.put(None)
