@@ -1,5 +1,6 @@
 from typing import Optional
 import time
+import traceback
 
 
 class triggerBoxWireless:
@@ -61,32 +62,58 @@ class lightStimulator:
             if (
                 port.pid == 0x6001
                 and port.vid == 0x0403
-                and (
-                    "LIGHTSTIMA" in port.serial_number
-                    or "LIGHTSTIM" in port.serial_number
-                )
+                and port.serial_number in ["LIGHTSTIMA", "LIGHTSTIM"]
             ):
-                self.dev = Serial(port.device, baudrate=115200, timeout=1)
-                time.sleep(0.1)
-                self.dev.read_all()
+                self.dev = Serial(port.device, baudrate=115200, timeout=0.1)
+                self.dev.readall()
+                break
         else:
             raise Exception("Light stimulator not found")
 
-    def vep_mode(self, fs: list[Optional[float]]=[]):
+    def vep_mode(self, fs: list[Optional[float]] = [1, 1, 1, 1, 1, 1]):
+        """
+        Parameters
+        ----------
+        fs : list, default [1,1,1,1,1,1]
+            List of frequencies in Hz, range from 0 to 100 with 0.1Hz resolution.
+            If a corresponding frequency is None, 0  or not given, it will be set to off.
+        """
+        fss = fs.copy()
+        if len(fss) < self.channels:
+            fss += [0] * (self.channels - len(fss))
         for i in range(self.channels):
-            if i > len(fs):
-                continue
-            if fs[i] is not None:
-                command = f"AT+VEP={i+1},{fs[i]}\r\n".encode()
-                self.dev.write(command)
-                # time.sleep(0.02)
-        time.sleep(0.05)
-        print(self.dev.readall())
+            fss[i] = self._validate_fs(fss[i])
+        command = ",".join([f"{f:.1f}" for f in fss[: self.channels]])
+        command = f"AT+VEP={command}\r\n".encode()
+        self.dev.write(command)
+        ret = self.dev.readall()
+        print(ret)
+        if b"SSVEP MODE OK" not in ret:
+            raise Exception("Failed to set VEP mode")
 
     def erp_mode(self, fs: float):
-        command = f"AT+ERP=,{fs}\r\n".encode()
+        fs = self._validate_fs(fs)
+        command = f"AT+ERP={fs:.1f}\r\n".encode()
         self.dev.write(command)
+        ret = self.dev.readall()
+        print(ret)
+        if b"ERP MODE OK" not in ret:
+            raise Exception("Failed to set VEP mode")
+
+    def _validate_fs(self, fs: float):
+        if not isinstance(fs, (int, float)):
+            if fs is None:
+                fs = 0
+            else:
+                raise Exception("Invalid frequency")
+        if fs > 100 or fs < 0:
+            raise Exception("Invalid frequency")
+        return fs
 
     def __del__(self):
         if hasattr(self, "dev"):
-            self.dev.close()
+            try:
+                self.dev.close()
+            except Exception:
+                traceback.print_exc()
+                print("Failed to close light stimulator")

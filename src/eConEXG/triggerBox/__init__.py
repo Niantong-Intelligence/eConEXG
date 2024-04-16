@@ -1,1 +1,2 @@
-from .triggerbox import TriggerBox
+__all__ = ["lightStimulator", "triggerBoxWired", "triggerBoxWireless"]
+from .triggerbox import lightStimulator, triggerBoxWired, triggerBoxWireless

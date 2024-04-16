@@ -1,4 +1,4 @@
-import bluetooth
+from .. import bluetooth
 from queue import Queue
 from threading import Thread
 
@@ -43,15 +43,13 @@ class conn(Thread):
     def connect(self, addr):
         self.__search_flag = False
         if addr == "":
-            return False
+            return None
         uuid = "00001101-0000-1000-8000-00805f9b34fb"
         service_matches = bluetooth.find_service(uuid=uuid, address=addr)
         if len(service_matches) == 0:
             warn = "Bluetooth connection failed, please retry."
             self.device_queue.put(warn)
-            return False
+            return None
         device = service_matches[0]
-        self.__device_config["host"] = device["host"]
-        self.__device_config["port"] = device["port"]
         print("bluetooth connected!")
-        return True
+        return (device["host"],device["port"])

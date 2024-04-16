@@ -12,4 +12,3 @@ elif system == "linux":
     from . import wifi_windows as wifi_util
 else:
     from . import wifi_macos as wifi_util
-

@@ -5,7 +5,7 @@ import time
 class iFocus:
     def __init__(self, port) -> None:
         self.delay = 0.1
-        self.dev = Serial(port=port, baudrate=921600,timeout=3)
+        self.dev = Serial(port=port, baudrate=921600, timeout=3)
         time.sleep(self.delay)
 
     def connect_socket(self):
@@ -28,7 +28,7 @@ class iFocus:
 class econAlpha:
     def __init__(self, port) -> None:
         self.delay = 0.1
-        self.dev = Serial(port=port, baudrate=460800,timeout=3)
+        self.dev = Serial(port=port, baudrate=460800, timeout=3)
         time.sleep(self.delay)
 
     def connect_socket(self):

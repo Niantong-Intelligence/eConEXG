@@ -32,4 +32,4 @@ class conn(Thread):
         if port == "":
             return False
         self.__device_config["port"] = port
-        return True
+        return port

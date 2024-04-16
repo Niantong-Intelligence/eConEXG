@@ -1,4 +1,3 @@
-
 import time
 from multiprocessing import Process, Queue, Value
 from typing import Literal
@@ -9,20 +8,20 @@ CAP_END = 101
 CAP_TERMINATED = 102
 
 
-class iDevice(Process):
+class iFocus(Process):
     @staticmethod
     def get_device(dev_type: Literal["EEG", "EMG"] = "EMG"):
         devices = list(comports())
         if dev_type == "EMG":
             for device in devices:
                 if "FTDI" in device.manufacturer:
-                    if device.serial_number in ['IFOCUSA','iFocus']:
+                    if device.serial_number in ["IFOCUSA", "iFocus"]:
                         continue
                     return device.device
         else:
             for device in devices:
                 if "FTDI" in device.manufacturer:
-                    if device.serial_number in ['IFOCUSA','iFocus']:
+                    if device.serial_number in ["IFOCUSA", "iFocus"]:
                         return device.device
         return None
 
@@ -67,13 +66,14 @@ class iDevice(Process):
                     raise Exception
                 self.__recv_queue.put(data)
             except Exception:
-                self.socket_flag.value=3
-                self.__cap_status.value=CAP_END
+                self.socket_flag.value = 3
+                self.__cap_status.value = CAP_END
 
     def run(self):
         import queue
         import threading
         import traceback
+
         if self.dev_type == "EMG":
             from .emgParser import Parser
             from .device_socket import econAlpha as dev

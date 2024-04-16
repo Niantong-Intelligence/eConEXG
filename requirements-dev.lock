@@ -8,11 +8,26 @@
 #   with-sources: false
 
 -e file:.
+colorama==0.4.6
+    # via pytest
+comtypes==1.4.1
+    # via econexg
+iniconfig==2.0.0
+    # via pytest
+netifaces==0.11.0
+    # via econexg
 numpy==1.26.4
     # via pyedflib
+packaging==24.0
+    # via pytest
+pluggy==1.4.0
+    # via pytest
 pyedflib==0.1.37
     # via econexg
 pylsl==1.16.2
     # via econexg
 pyserial==3.5
+    # via econexg
+pytest==8.1.1
+pywifi==1.1.12
     # via econexg

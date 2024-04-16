@@ -80,6 +80,7 @@ class bluetooth_socket:
         bettery = int.from_bytes(self.recv_socket(1), byteorder="big")
         return bettery
 
+
 class com_socket:
     order = {
         500: b"\x55\x66\x52\x41\x54\x45\x01\x0a",

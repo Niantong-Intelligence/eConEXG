@@ -19,7 +19,7 @@ class conn(Thread):
 
     def run(self):
         wifi = pywifi.PyWiFi()
-        interface=None
+        interface = None
         for interface in wifi.interfaces():
             if any(sub in interface.name() for sub in ["USB", "usb"]):
                 break
@@ -51,7 +51,7 @@ class conn(Thread):
     def stop(self):
         self.__search_flag = False
 
-    def _get_default_gateway(self): # TODO: some problems under multiple interfaces
+    def _get_default_gateway(self):  # TODO: some problems under multiple interfaces
         gateways = netifaces.gateways()
         for ips in gateways[netifaces.AF_INET]:
             if ips[1] == str(self.__interface._raw_obj["guid"]):
@@ -101,7 +101,7 @@ class conn(Thread):
             print("...Retry connecting:", i + 1)
         warn = "Wi-Fi connection failed, please retry.\nFor encrypted device, connect through system wifi setting first."
         self.device_queue.put(warn)
-        if any(sub in self.__interface.name()  for sub in ["USB", "usb"]):
+        if any(sub in self.__interface.name() for sub in ["USB", "usb"]):
             self.__interface.remove_all_network_profiles()
             self.__interface.disconnect()
         return False

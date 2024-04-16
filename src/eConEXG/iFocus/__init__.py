@@ -1,2 +1,3 @@
-from .data_reader import iDevice
-__all__=['iDevice']
+from .data_reader import iFocus
+
+__all__ = ["iFocus"]

@@ -87,22 +87,20 @@ class iRecorder(Process):
         return warn
 
     def run(self):
-        from data_parser import Parser
+        from .data_parser import Parser
         from threading import Thread
         import queue
 
         if self.sock_args["interface"] == "Wi-Fi":
-            from device_socket import wifi_socket as device_socket
-            from physical_interface import wifi_util as interface
+            from .device_socket import wifi_socket as device_socket
+            from .physical_interface import wifi_util as interface
         elif self.sock_args["interface"] == "Bluetooth":
-            from device_socket import bluetooth_socket as device_socket
-            from physical_interface import bluetooth_util as interface
+            from .device_socket import bluetooth_socket as device_socket
+            from .physical_interface import bluetooth_util as interface
         elif self.sock_args["interface"] == "COM":
-            from device_socket import com_socket as device_socket
-            from physical_interface import com_util as interface
-        elif self.sock_args["interface"] == "UWB":
-            from device_socket import uwb_socket as device_socket
-            from physical_interface import com_util as interface
+            from .device_socket import com_socket as device_socket
+            from .physical_interface import com_util as interface
+
 
         def _clear_queue(data: queue.Queue) -> None:
             data.put(None)

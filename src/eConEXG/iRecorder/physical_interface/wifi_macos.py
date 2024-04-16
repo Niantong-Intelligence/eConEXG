@@ -5,6 +5,7 @@ import locale
 import netifaces
 import time
 
+
 class conn(Thread):
     PATH_OF_AIRPORT = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
 

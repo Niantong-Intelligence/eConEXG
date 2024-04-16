@@ -7,6 +7,6 @@ SDK for Niantong devices.
 
 On all non-Windows platforms and for some Windows-Python combinations, you must first obtain a liblsl shared library to use lsl feature. See the [liblsl repo documentation](https://github.com/sccn/liblsl) for further details.
 
-## Get pylsl from PyPI
+## Get eConEXG from PyPI
 
 * `pip install eConEXG`

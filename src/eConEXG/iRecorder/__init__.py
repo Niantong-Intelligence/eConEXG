@@ -1,2 +1,3 @@
-from .data_reader import iRecorder
-__all__ = ['iRecorder']
+from .device import iRecorder
+
+__all__ = ["iRecorder"]
