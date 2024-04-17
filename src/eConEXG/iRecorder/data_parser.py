@@ -8,7 +8,7 @@ import numpy as np
 
 class Parser:
     def __init__(self, chs, fs):
-        self.num_channels = chs
+        self.chs = chs
         self.ch_bytes = 3
         self.batt_val = -1
         self.__start = 2
@@ -19,7 +19,7 @@ class Parser:
         self._ratio = 0.02235174
         self.imp_len = int(512 * 2 * fs / 500)
         self.imp_factor = 1000 / 6 / (self.imp_len / 2) * math.pi / 4
-        length = self.num_channels * self.ch_bytes + abs(self.__checksum)
+        length = self.chs * self.ch_bytes + abs(self.__checksum)
         self.__pattern = re.compile(b"\xbb\xaa.{%d}" % length, flags=re.DOTALL)
         self.threshold = int((self.__start + length) * fs * 0.005)
         self.clear_buffer()
@@ -28,14 +28,12 @@ class Parser:
         self.__buffer = bytearray()
         self.__last_num = 255
         self.packet_drop_count = 0
-        self.__impe_queue = np.zeros(
-            (self.imp_len, self.num_channels), dtype=np.float32
-        )
+        self.__impe_queue = np.zeros((self.imp_len, self.chs))
         self.imp_idx = 0
 
     def cal_imp(self, data_queue, imp_queue: Queue):
         for data in data_queue:
-            self.__impe_queue[self.imp_idx] = data[: self.num_channels]
+            self.__impe_queue[self.imp_idx] = data[: self.chs]
             self.imp_idx += 1
             if self.imp_idx == self.imp_len:
                 impe_data = self._get_impedance(self.__impe_queue)

@@ -1,2 +1,3 @@
-__all__=['triggerBox']
-from . import triggerBox
+__all__ = ["triggerBoxWired", "triggerBoxWireless", "lightStimulator", "iRecorder"]
+from .triggerBox import triggerBoxWired, triggerBoxWireless, lightStimulator
+from .iRecorder import iRecorder

@@ -5,6 +5,7 @@ authors = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
 
 description = "Add your description here"
 dependencies = [
+    "numpy",
     "pyserial>=3.5",
     "pyEDFlib>=0.1.37",
     "pylsl>=1.16.2",

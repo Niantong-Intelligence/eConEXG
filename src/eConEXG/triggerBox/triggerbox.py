@@ -55,7 +55,7 @@ class lightStimulator:
     def __init__(self) -> None:
         from serial import Serial
         from serial.tools.list_ports import comports
-
+        self.wait_time = 0.1
         self.channels = 6
         ports = comports()
         for port in ports:
@@ -64,8 +64,8 @@ class lightStimulator:
                 and port.vid == 0x0403
                 and port.serial_number in ["LIGHTSTIMA", "LIGHTSTIM"]
             ):
-                self.dev = Serial(port.device, baudrate=115200, timeout=0.1)
-                self.dev.readall()
+                self.dev = Serial(port.device, baudrate=115200, timeout=2)
+                self.dev.read_all()
                 break
         else:
             raise Exception("Light stimulator not found")
@@ -86,7 +86,8 @@ class lightStimulator:
         command = ",".join([f"{f:.1f}" for f in fss[: self.channels]])
         command = f"AT+VEP={command}\r\n".encode()
         self.dev.write(command)
-        ret = self.dev.readall()
+        time.sleep(self.wait_time)
+        ret = self.dev.read_all()
         print(ret)
         if b"SSVEP MODE OK" not in ret:
             raise Exception("Failed to set VEP mode")
@@ -95,7 +96,8 @@ class lightStimulator:
         fs = self._validate_fs(fs)
         command = f"AT+ERP={fs:.1f}\r\n".encode()
         self.dev.write(command)
-        ret = self.dev.readall()
+        time.sleep(self.wait_time)
+        ret = self.dev.read_all()
         print(ret)
         if b"ERP MODE OK" not in ret:
             raise Exception("Failed to set VEP mode")

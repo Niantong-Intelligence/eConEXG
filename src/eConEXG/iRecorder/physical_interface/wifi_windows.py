@@ -8,10 +8,11 @@ import locale
 from traceback import print_exc
 
 
-class conn(Thread):
-    def __init__(self, device_queue: Queue, device_config):
+class wifiWindows(Thread):
+    def __init__(self, device_queue: Queue, duration=3):
         super().__init__(daemon=True)
         self.device_queue = device_queue
+        self.duration = duration
         self.port = 4321
         self.__search_flag = True
         self.__interface = None

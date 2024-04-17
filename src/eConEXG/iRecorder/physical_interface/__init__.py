@@ -1,15 +1,47 @@
+DEVTYPE = 0
 
-__all__ = ["com_util", "bluetooth_util", "wifi_util"]
-import platform
 
-from . import com as com_util
+def get_interface(TYPE):
+    from platform import system
 
-system = platform.system()
-if system == "Windows":
-    from . import bluetooth as bluetooth_util
-    from . import wifi_windows as wifi_util
-elif system == "Linux":
-    from . import bluetooth as bluetooth_util
-    from . import wifi_windows as wifi_util
-elif system == "Darwin":
-    from . import wifi_macos as wifi_util
+    global DEVTYPE
+    DEVTYPE = TYPE
+    if TYPE in ["W8", "W16"]:
+        if system() == "Windows":
+            from .bluetooth import bt as phy_interface
+            from . import bluetooth
+
+            bluetooth.CHANNELS = 8 if TYPE == "W8" else 16
+        else:
+            raise NotImplementedError("Unsupported platform")
+
+    elif TYPE in ["W32"]:
+        if system() == "Windows":
+            from .wifi_windows import wifiWindows as phy_interface
+        elif system() == "Darwin":
+            from .wifi_macos import wifiMACOS as phy_interface
+        else:
+            raise NotImplementedError("Unsupported platform")
+
+    elif TYPE in ["USB32"]:
+        from .com import com as phy_interface
+
+        print("hah")
+    else:
+        raise NotImplementedError("Unsupported interface type")
+
+    return phy_interface
+
+
+def get_sock():
+    global DEVTYPE
+    if DEVTYPE in ["W8", "W16"]:
+        from .device_socket import bluetooth_socket as sock
+    elif DEVTYPE in ["W32"]:
+        from .device_socket import wifi_socket as sock
+
+    elif DEVTYPE in ["USB32"]:
+        from .device_socket import com_socket as sock
+    else:
+        raise NotImplementedError("Unsupported socket type")
+    return sock

@@ -1,13 +1,16 @@
 from .. import bluetooth
 from queue import Queue
 from threading import Thread
+from typing import Union
+
+CHANNELS: Union[16, 8] = 16
 
 
-class conn(Thread):
-    def __init__(self, device_queue: Queue, device_config):
+class bt(Thread):
+    def __init__(self, device_queue: Queue, duration=3):
         super().__init__(daemon=True)
         self.device_queue = device_queue
-        self.__device_config = device_config
+        self.duration = duration
         self.__search_flag = True
 
     def run(self):
@@ -27,10 +30,10 @@ class conn(Thread):
             for device in nearby_devices:
                 addr = device[0]
                 name = device[1]
-                if self.__device_config["channel"] == 16:
+                if CHANNELS == 16:
                     if "iRecorder-" not in name:
                         continue
-                elif self.__device_config["channel"] == 8:
+                elif CHANNELS == 8:
                     if "iRecorder8-" not in name:
                         continue
                 if name not in added_devices:

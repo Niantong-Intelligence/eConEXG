@@ -8,7 +8,7 @@
 #   with-sources: false
 
 -e file:.
-comtypes==1.4.1 ; platform_system == "Windows"
+comtypes==1.4.1
     # via econexg
 netifaces==0.11.0
     # via econexg
@@ -20,5 +20,5 @@ pylsl==1.16.2
     # via econexg
 pyserial==3.5
     # via econexg
-pywifi==1.1.12 ; platform_system == "Windows"
+pywifi==1.1.12
     # via econexg

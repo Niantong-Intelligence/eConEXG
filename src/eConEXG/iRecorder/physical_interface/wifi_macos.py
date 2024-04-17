@@ -6,10 +6,10 @@ import netifaces
 import time
 
 
-class conn(Thread):
+class wifiMACOS(Thread):
     PATH_OF_AIRPORT = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
 
-    def __init__(self, device_queue: Queue, device_config):
+    def __init__(self, device_queue: Queue, *arg, **args):
         super().__init__(daemon=True)
         self.device_queue = device_queue
         self.port = 4321
