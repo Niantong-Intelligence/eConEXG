@@ -2,13 +2,12 @@ import math
 import re
 from datetime import datetime
 from queue import Queue
-from threading import Thread
 
 import numpy as np
 
 
 class Parser:
-    def __init__(self, chs, fs,queue: Queue):
+    def __init__(self, chs, fs, queue: Queue):
         self.queue = queue
         self.chs = chs
         self.ch_bytes = 3
@@ -39,12 +38,7 @@ class Parser:
             self.__impe_queue[self.imp_idx] = data[: self.chs]
             self.imp_idx += 1
             if self.imp_idx == self.imp_len:
-                task = Thread(
-                    target=self._get_impedance,
-                    args=(self.__impe_queue.copy(),),
-                    daemon=True,
-                )
-                task.start()
+                self._get_impedance(self.__impe_queue)
                 self.imp_idx = 0
 
     def _get_impedance(self, data):
@@ -60,7 +54,7 @@ class Parser:
         self.__buffer.extend(q)
         if len(self.__buffer) < self.threshold:
             return self.batt_val
-        data_list = []
+        frames = []
         for frame_obj in self.__pattern.finditer(self.__buffer):
             frame = frame_obj.group()
             raw = frame[self.__start : self.__checksum]
@@ -75,17 +69,20 @@ class Parser:
                 print(err)
             self.__last_num = cur_num
             data = [
-                int.from_bytes(raw[i : i + self.ch_bytes], signed=True, byteorder="big")
+                int.from_bytes(
+                    raw[i * self.ch_bytes : (i + 1) * self.ch_bytes],
+                    signed=True,
+                    byteorder="big",
+                )
                 * self._ratio
-                for i in range(0, len(raw), self.ch_bytes)
+                for i in range(self.chs)
             ]  # default byteorder="big"
             data.append(frame[self.__trigger])
-            data_list.append(data)
-        if data_list:
+            frames.append(data)
+        if frames:
             if self.imp_flag:
-                self._cal_imp(data_list)
+                self._cal_imp(frames)
             else:
-                self.queue.put(data_list)
+                self.queue.put(frames)
             del self.__buffer[: frame_obj.end()]
-            # print(f"parsed{len(data_list)},{datetime.now()}")
             self.batt_val = frame[self.__battery]

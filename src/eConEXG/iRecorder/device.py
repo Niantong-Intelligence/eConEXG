@@ -1,4 +1,3 @@
-import queue
 import time
 import traceback
 from queue import Queue
@@ -79,8 +78,6 @@ class iRecorder(Thread):
             self.__battery.value = self.dev.send_heartbeat()
             self._socket_flag.value = 2
             self.device_queue.put(True)
-            print("socket connected!")
-            self.data_queue = queue.Queue()
             self._status.value = IDLE_START
             self.parser = Parser(
                 self.sock_args["channel"], self.sock_args["fs"], self._save_data
@@ -185,7 +182,7 @@ class iRecorder(Thread):
         return warn
 
     def __recv_data(self):
-        def _clear_queue(data: queue.Queue) -> None:
+        def _clear_queue(data: Queue) -> None:
             data.put(None)
             while data.get() is not None:
                 continue
@@ -215,7 +212,6 @@ class iRecorder(Thread):
             if self._status.value == IDLE_START:
                 self._socket_flag.value = 5
             self._status.value = TERMINATE_START
-        _clear_queue(self.data_queue)
         _clear_queue(self._save_data)
         self.parser.clear_buffer()
         print("Recv thread closed")
