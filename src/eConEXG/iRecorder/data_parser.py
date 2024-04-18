@@ -56,7 +56,7 @@ class Parser:
             return self.batt_val
         frames = []
         for frame_obj in self.__pattern.finditer(self.__buffer):
-            frame = frame_obj.group()
+            frame = memoryview(frame_obj.group())
             raw = frame[self.__start : self.__checksum]
             if frame[self.__checksum] != (~sum(raw)) & 0xFF:
                 err = f"|Checksum invalid, packet dropped{datetime.now()}\n|Current:{frame.hex()}"
