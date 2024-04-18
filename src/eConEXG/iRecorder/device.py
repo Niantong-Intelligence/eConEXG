@@ -1,8 +1,11 @@
-import time
 import queue
+import time
 import traceback
-from multiprocessing import Process, Queue, Value, Event
-from typing import Literal, Union, Optional
+from queue import Queue
+from threading import Thread
+from typing import Literal, Optional, Union
+
+from .data_parser import Parser
 from .physical_interface import get_interface, get_sock
 
 SIGNAL = 10
@@ -15,29 +18,33 @@ TERMINATE = 100
 TERMINATE_START = 101
 
 
-class iRecorder(Process):
+class Value:
+    def __init__(self, type_char, value):
+        self.type_char = type_char
+        self.value = value
+
+
+class iRecorder(Thread):
     def __init__(
         self,
         dev_type: Literal["W8", "W16", "W32", "USB32"],
-        fs: Union[500, 1000, 2000] = 500,
+        fs: Union[Literal[500], Literal[1000], Literal[2000]] = 500,
     ):
         """
         params:
         - dev_type: str, device type, "W8", "W16", "W32", "USB32"
         - fs: int, sample frequency, available to USB32 devices
         """
-        print("initing iRecorder")
-        Process.__init__(self, daemon=True, name="Data collect")
+        super().__init__(daemon=True, name="Data collect")
 
         self.device_queue = Queue(128)
         self._socket_flag = Value("i", 0)
         self._save_data = Queue()
         self._status = Value("i", TERMINATE)
         self.__battery = Value("i", -1)
-        self.__halt_flag = Event()
 
         if dev_type != "USB32" and fs != 500:
-            print("fs is only available to USB32 devices, 500 would be used instead.")
+            print("optional fs only available to USB32 devices, set to 500")
             fs = 500
         if fs not in [500, 1000, 2000]:
             raise ValueError("fs should be in 500, 1000 or 2000")
@@ -51,24 +58,64 @@ class iRecorder(Process):
             self.sock_args.update({"channel": 32})
         elif dev_type == "USB32":
             self.sock_args.update({"channel": 32})
-        self.iface = get_interface(dev_type)
+        else:
+            raise ValueError("Invalid device type")
+        self._interface = get_interface(dev_type)(self.device_queue, 5)
+        self.dev_sock = get_sock(dev_type)
 
-    def connect_device(self, addr=""):  # TODO
-        # if hasattr(self, "interface"):
-        #     try:
-        #         self.interface.join(timeout=1)
-        #     finally:
-        #         del self.interface
+    def connect_device(self, addr=""):
+        if not addr:
+            return
+        if self.is_alive():
+            raise Exception("iRecorder already connected")
+            # connecting physical interface
+        try:
+            ret = self._interface.connect(addr)
+            if not ret:
+                raise Exception("Failed to connect physical interface")
+            self.sock_args.update({"sock": ret})
+            print("dev args:", self.sock_args)  # start connecting socket
+            self.dev = self.dev_sock(self.sock_args)
+            self.__battery.value = self.dev.send_heartbeat()
+            self._socket_flag.value = 2
+            self.device_queue.put(True)
+            print("socket connected!")
+            self.data_queue = queue.Queue()
+            self._status.value = IDLE_START
+            self.parser = Parser(
+                self.sock_args["channel"], self.sock_args["fs"], self._save_data
+            )
+            self.start()
+        except Exception:
+            traceback.print_exc()
+            self._socket_flag.value = 6
+            if self._interface.is_alive():
+                self._interface.join()
+            raise Exception("Failed to connect device")
 
-        if not self.__halt_flag.is_set():
-            self._save_data.put(addr)
-            self.__halt_flag.set()
+    def get_devices(self, verbose=True):
+        ret = []
+        while not self.device_queue.empty():
+            info = self.device_queue.get()
+            if isinstance(info, list):
+                ret.append(info if verbose else info[-1])
+            elif isinstance(info, str):
+                raise Exception(info)
+            elif isinstance(info, bool):
+                if verbose:
+                    ret.append(info)
+        return ret
 
-    def find_device(self, _queue: Optional[queue.Queue] = None, duration=5):
-        self.interface = self.iface(_queue, duration)
-        if not _queue:
-            self.interface.join()
-            return self.interface.devs
+    def find_device(self, duration=None):
+        # start searching devie
+        if self.is_alive():
+            raise Exception("iRecorder already connected.")
+        self._socket_flag.value = 1
+        self._interface.duration = duration
+        self._interface.start()
+        if duration is not None:
+            self._interface.join()
+            return self.get_devices(verbose=False)
 
     def start_acquisition_data(self) -> Optional[True]:
         if self._status.value == TERMINATE:
@@ -81,13 +128,10 @@ class iRecorder(Process):
 
     def get_data(self):
         if self._socket_flag.value != 2:
-            raise Exception(f"{self.get_sock_error()}")
+            raise Exception(f"{self.__get_sock_error()}")
         data = []
-        while True:
-            try:
-                data.extend(self._save_data.get(block=False))
-            except queue.Empty:
-                break
+        while not self._save_data.empty():
+            data.extend(self._save_data.get())
         return data
 
     def stop_acquisition(self):
@@ -108,13 +152,10 @@ class iRecorder(Process):
 
     def get_impedance(self) -> list:
         if self._socket_flag.value != 2:
-            raise Exception(f"{self.get_sock_error()}")
+            raise Exception(f"{self.__get_sock_error()}")
         data = []
-        while True:
-            try:
-                data = self._save_data.get(block=False)
-            except queue.Empty:
-                break
+        while not self._save_data.empty():
+            data = self._save_data.get(block=False)
         return data
 
     def close_dev(self):
@@ -124,13 +165,15 @@ class iRecorder(Process):
             while self._status.value != TERMINATE:
                 time.sleep(0.01)
         print("iRecorder disconnected")
+        if self._interface.is_alive():
+            self._interface.join()
         if self.is_alive():
             self.join()
 
     def get_battery_value(self):
         return self.__battery.value
 
-    def get_sock_error(self):
+    def __get_sock_error(self):
         if self._socket_flag.value == 3:
             warn = "Data transmission timeout."
         elif self._socket_flag.value == 4:
@@ -141,120 +184,65 @@ class iRecorder(Process):
             warn = f"Unknown error: {self._socket_flag.value}"
         return warn
 
-    def run(self):
-        from .data_parser import Parser
-        from threading import Thread
-        import queue
-
-
+    def __recv_data(self):
         def _clear_queue(data: queue.Queue) -> None:
             data.put(None)
             while data.get() is not None:
                 continue
 
-        def _socket_recv():
-            retry = 0
-            while self._status.value in [SIGNAL, IMPEDANCE]:
-                try:
-                    data = self.dev.recv_socket()
-                    self.__battery.value = self.parser.parse_data(data, self.data_queue)
-                except Exception:
-                    traceback.print_exc()
-                    if (self.sock_args["interface"] == "Wi-Fi") and (retry < 1):
-                        try:
-                            print("Wi-Fi reconnecting...")
-                            time.sleep(3)
-                            self.dev.close_socket()
-                            self.dev = self.dev_sock(self.sock_args, retry_timeout=2)
-                            retry += 1
-                            continue
-                        except Exception:
-                            print("Wi-Fi reconnection failed")
-                    self._socket_flag.value = 3
-                    self._status.value = TERMINATE_START
+        retry = 0
+        while self._status.value in [SIGNAL, IMPEDANCE]:
             try:
-                self.dev.stop_recv()
+                data = self.dev.recv_socket()
+                self.parser.parse_data(data)
             except Exception:
-                if self._status.value == IDLE_START:
-                    self._socket_flag.value = 5
+                traceback.print_exc()
+                if (self.sock_args["interface"] == "W32") and (retry < 1):
+                    try:
+                        print("Wi-Fi reconnecting...")
+                        time.sleep(3)
+                        self.dev.close_socket()
+                        self.dev = self.dev_sock(self.sock_args, retry_timeout=2)
+                        retry += 1
+                        continue
+                    except Exception:
+                        print("Wi-Fi reconnection failed")
+                self._socket_flag.value = 3
                 self._status.value = TERMINATE_START
-            _clear_queue(self.data_queue)
-            _clear_queue(self._save_data)
-            self.parser.clear_buffer()
-            print("Recv thread closed")
         try:
-            # start searching devie
-            self._socket_flag.value = 1
-            _interface = self.iface(self.device_queue, duration=5)
-            _interface.start()
-            self.__halt_flag.wait()
-            # connecting physical interface
-            ret=self._save_data.get()
-            self.sock_args.update({"sock": ret})
-            if not _interface.connect():
-                self._socket_flag.value = 0
-                return
-            print("dev args:", self.sock_args)  # start connecting socket
-            self.dev = self.dev_sock(self.sock_args)
-            self.__battery.value = self.dev.send_heartbeat()
-            self.device_queue.put(2)
-            self._socket_flag.value = 2
-        except Exception as e:
-            traceback.print_exc()
-            try:
-                self.dev.close_socket()
-            finally:
-                self.device_queue.put(str(e))
-                self._socket_flag.value = 0
-                return
-        print("socket connected!")
-        self.data_queue = queue.Queue()
-        self._status.value = IDLE_START
-        self.parser = Parser(chs=self.sock_args["channel"], fs=self.sock_args["fs"])
-        self._recv_thread = Thread(target=_socket_recv, daemon=True)
-        self._recv_thread.start()
+            self.dev.stop_recv()
+        except Exception:
+            if self._status.value == IDLE_START:
+                self._socket_flag.value = 5
+            self._status.value = TERMINATE_START
+        _clear_queue(self.data_queue)
+        _clear_queue(self._save_data)
+        self.parser.clear_buffer()
+        print("Recv thread closed")
 
-        while True:
+    def run(self):
+        while self._status.value not in [TERMINATE_START]:
             if self._status.value in [SIGNAL_START, IMPEDANCE_START]:
                 print("IMPEDANCE/SIGNAL START")
-                timestamp = time.time()
                 try:
                     if self._status.value == SIGNAL_START:
                         self.dev.start_data()
+                        self.parser.imp_flag = False
                         self._status.value = SIGNAL
                     elif self._status.value == IMPEDANCE_START:
                         self.dev.start_impe()
+                        self.parser.imp_flag = True
                         self._status.value = IMPEDANCE
+                    self.__recv_data()
                 except Exception:
                     print("IMPEDANCE/SIGNAL START FAILED!")
                     self._socket_flag.value = 4
                     self._status.value = TERMINATE_START
-                self._recv_thread = Thread(target=_socket_recv, daemon=True)
-                self._recv_thread.start()
-            elif self._status.value in [SIGNAL, IMPEDANCE]:
-                try:
-                    data = self.data_queue.get(timeout=0.01)
-                except queue.Empty:
-                    continue
-                if self._status.value == SIGNAL:
-                    self._save_data.put(data)
-                elif self._status.value == IMPEDANCE:
-                    self.parser.cal_imp(data, self._save_data)
-            elif self._status.value in [IDLE_START, TERMINATE_START]:
-                self._recv_thread.join()
-                if self._status.value == IDLE_START:
-                    timestamp = time.time()
-                    self._status.value = IDLE
-                    print("IDLE START")
-                    continue
-                try:
-                    self.dev.close_socket()
-                    print("socket closed")
-                except Exception:
-                    print("socket close failed")
-                self._status.value = TERMINATE
-                print("TERMINATED")
-                return
+            elif self._status.value in [IDLE_START]:
+                timestamp = time.time()
+                self._status.value = IDLE
+                print("IDLE START")
+                continue
             elif self._status.value in [IDLE]:
                 if (time.time() - timestamp) < 5:
                     time.sleep(0.1)  # to reduce cpu usage
@@ -269,3 +257,9 @@ class iRecorder(Process):
                     self._status.value = TERMINATE_START
             else:
                 print("OOPS")
+        try:
+            self.dev.close_socket()
+        except Exception:
+            print("socket close failed")
+        self._status.value = TERMINATE
+        print("TERMINATED")

@@ -16,8 +16,9 @@ class wifiWindows(Thread):
         self.port = 4321
         self.__search_flag = True
         self.__interface = None
+        self.validate_interface()
 
-    def run(self):
+    def validate_interface(self):
         wifi = pywifi.PyWiFi()
         interface = None
         for interface in wifi.interfaces():
@@ -26,27 +27,34 @@ class wifiWindows(Thread):
         if interface is None:
             warn = "Wi-Fi interface not found, please insert a USB interface card."
             self.device_queue.put(warn)
-            return
+            raise Exception(warn)
         self.__interface = interface
+        try:
+            self.__interface.scan_results()
+        except Exception:
+            warn = "Wi-Fi interface disabled, please enable it in system setting."
+            self.device_queue.put(warn)
+            raise Exception(warn)
+
+    def run(self):
         self.device_queue.put([str(self.__interface.name())])
         added_devices = set()
         search_interval = 0
+        start=time.time()
         while self.__search_flag:
             self.__interface.scan()
             time.sleep(min(search_interval + 0.5, 5))
-            try:
-                devices = self.__interface.scan_results()
-            except Exception:
-                warn = "Wi-Fi interface disabled, please enable it in system setting."
-                self.device_queue.put(warn)
-                return
+            devices = self.__interface.scan_results()
             for device in devices:
                 if "iRe" not in device.ssid:
                     continue
                 if device.ssid not in added_devices:
                     added_devices.add(device.ssid)
-                    self.device_queue.put([device.ssid, device.bssid[:-1], "1"])
-        print("search finished")
+                    self.device_queue.put([device.ssid, device.bssid[:-1], device.ssid])
+            if self.duration is None:
+                continue
+            if time.time()-start>self.duration:
+                break
 
     def stop(self):
         self.__search_flag = False
@@ -77,8 +85,6 @@ class wifiWindows(Thread):
 
     def connect(self, ssid):
         self.__search_flag = False
-        if ssid == "":
-            return False
         if self._get_connected_wifi_name() == ssid:  # return if connected
             host = self._get_default_gateway()
             if host is not None:

@@ -26,15 +26,15 @@ def get_interface(TYPE):
     elif TYPE in ["USB32"]:
         from .com import com as phy_interface
 
-        print("hah")
     else:
         raise NotImplementedError("Unsupported interface type")
 
     return phy_interface
 
 
-def get_sock():
+def get_sock(TYPE):
     global DEVTYPE
+    DEVTYPE = TYPE
     if DEVTYPE in ["W8", "W16"]:
         from .device_socket import bluetooth_socket as sock
     elif DEVTYPE in ["W32"]:

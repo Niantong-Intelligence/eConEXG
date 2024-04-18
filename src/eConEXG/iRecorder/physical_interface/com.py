@@ -2,7 +2,7 @@ from serial.tools.list_ports import comports
 from queue import Queue
 from threading import Thread
 
-
+import time
 class com(Thread):
     def __init__(self, device_queue: Queue , duration=3):
         super().__init__(daemon=True)
@@ -12,9 +12,8 @@ class com(Thread):
 
     def run(self):
         added_devices = set()
-        search_interval = 0
+        start=time.time()
         while self.__search_flag:
-            search_interval = min(search_interval + 1, 5)
             nearby_devices = comports()
             for device in nearby_devices:
                 if not (device.pid == 0x5740 and device.vid == 0x0483):
@@ -23,10 +22,12 @@ class com(Thread):
                 if name not in added_devices:
                     added_devices.add(name)
                     self.device_queue.put([ f"iRe-{device.serial_number}",name, name])
-
+            time.sleep(0.5)
+            if self.duration is None:
+                continue
+            if time.time()-start>self.duration:
+                break
 
     def connect(self, port):
         self.__search_flag = False
-        if port == "":
-            return False
         return port

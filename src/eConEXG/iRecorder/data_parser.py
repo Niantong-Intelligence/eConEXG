@@ -2,12 +2,14 @@ import math
 import re
 from datetime import datetime
 from queue import Queue
+from threading import Thread
 
 import numpy as np
 
 
 class Parser:
-    def __init__(self, chs, fs):
+    def __init__(self, chs, fs,queue: Queue):
+        self.queue = queue
         self.chs = chs
         self.ch_bytes = 3
         self.batt_val = -1
@@ -16,12 +18,13 @@ class Parser:
         self.__trigger = -3
         self.__battery = -2
         self.__packet = -1
+        self.imp_flag = False
         self._ratio = 0.02235174
         self.imp_len = int(512 * 2 * fs / 500)
         self.imp_factor = 1000 / 6 / (self.imp_len / 2) * math.pi / 4
         length = self.chs * self.ch_bytes + abs(self.__checksum)
         self.__pattern = re.compile(b"\xbb\xaa.{%d}" % length, flags=re.DOTALL)
-        self.threshold = int((self.__start + length) * fs * 0.005)
+        self.threshold = int((self.__start + length) * fs * 0.01)
         self.clear_buffer()
 
     def clear_buffer(self):
@@ -31,13 +34,17 @@ class Parser:
         self.__impe_queue = np.zeros((self.imp_len, self.chs))
         self.imp_idx = 0
 
-    def cal_imp(self, data_queue, imp_queue: Queue):
+    def _cal_imp(self, data_queue):
         for data in data_queue:
             self.__impe_queue[self.imp_idx] = data[: self.chs]
             self.imp_idx += 1
             if self.imp_idx == self.imp_len:
-                impe_data = self._get_impedance(self.__impe_queue)
-                imp_queue.put(impe_data)
+                task = Thread(
+                    target=self._get_impedance,
+                    args=(self.__impe_queue.copy(),),
+                    daemon=True,
+                )
+                task.start()
                 self.imp_idx = 0
 
     def _get_impedance(self, data):
@@ -46,11 +53,11 @@ class Parser:
         tt = np.max(np.abs(freq_data[62:67]), axis=0)
         impe_data = np.abs(tt * self.imp_factor - 5000).astype(int)
         impe_data = np.where(iserror <= 0.2, math.inf, impe_data).tolist()
-        return impe_data
+        if self.imp_flag:
+            self.queue.put(impe_data)
 
-    def parse_data(self, q: bytes, recv_queue: Queue) -> list[list[float]]:
+    def parse_data(self, q: bytes) -> list[list[float]]:
         self.__buffer.extend(q)
-        self.__buffer.find
         if len(self.__buffer) < self.threshold:
             return self.batt_val
         data_list = []
@@ -75,8 +82,10 @@ class Parser:
             data.append(frame[self.__trigger])
             data_list.append(data)
         if data_list:
-            # print(f"parsed{len(data_list)},{datetime.now()}")
-            recv_queue.put(data_list)
+            if self.imp_flag:
+                self._cal_imp(data_list)
+            else:
+                self.queue.put(data_list)
             del self.__buffer[: frame_obj.end()]
+            # print(f"parsed{len(data_list)},{datetime.now()}")
             self.batt_val = frame[self.__battery]
-        return self.batt_val
