@@ -7,7 +7,7 @@ import numpy as np
 
 
 class Parser:
-    _ch_bytes = 3
+    _byts = 3
     batt_val = -1
     _start = 2
     _checksum = -4
@@ -22,10 +22,11 @@ class Parser:
         self._ratio = 0.02235174
         self.imp_len = int(512 * 2 * fs / 500)
         self.imp_factor = 1000 / 6 / (self.imp_len / 2) * math.pi / 4
-        length = self.chs * self._ch_bytes + abs(self._checksum)
+        length = self.chs * self._byts + abs(self._checksum)
         self.__pattern = re.compile(b"\xbb\xaa.{%d}" % length, flags=re.DOTALL)
         self.threshold = int((self._start + length) * fs * 0.01)
         self.clear_buffer()
+        self.update_chs()
 
     def clear_buffer(self):
         self.__buffer = bytearray()
@@ -33,6 +34,10 @@ class Parser:
         self.packet_drop_count = 0
         self.__impe_queue = np.zeros((self.imp_len, self.chs))
         self.imp_idx = 0
+
+    def update_chs(self, chs=None):
+        if not chs:
+            self.ch_idx = [i for i in range(self.chs)]
 
     def _cal_imp(self, frames):
         for data in frames:
@@ -71,12 +76,12 @@ class Parser:
             self.__last_num = cur_num
             data = [
                 int.from_bytes(
-                    raw[i * self._ch_bytes : (i + 1) * self._ch_bytes],
+                    raw[i * self._byts : (i + 1) * self._byts],
                     signed=True,
                     byteorder="big",
                 )
                 * self._ratio
-                for i in range(self.chs)
+                for i in self.ch_idx
             ]  # default byteorder="big"
             data.append(frame[self._trigger])
             frames.append(data)
@@ -85,7 +90,6 @@ class Parser:
             self.batt_val = frame[self._battery]
             if self.imp_flag:
                 self._cal_imp(frames)
+                return
             else:
-                self.queue.put(frames)
                 return frames
-
