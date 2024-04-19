@@ -24,13 +24,14 @@ class iRecorder(Thread):
         fs: Union[Literal[500], Literal[1000], Literal[2000]] = 500,
     ):
         """
-        params:
+        Parameters
+        ----------
         - dev_type: str, device type, "W8", "W16", "W32", "USB32"
         - fs: int, sample frequency, available to USB32 devices
         """
         super().__init__(daemon=True, name="Data collect")
 
-        self.device_queue = Queue(128)
+        self.info_q = Queue(128)
         self._socket_flag = 0
         self._save_data = Queue()
         self.__status = TERMINATE
@@ -53,7 +54,7 @@ class iRecorder(Thread):
             self.__dev_args.update({"channel": 32})
         else:
             raise ValueError("Invalid device type")
-        self._interface = get_interface(dev_type)(self.device_queue, 5)
+        self._interface = get_interface(dev_type)(self.info_q, 5)
         self.dev_sock = get_sock(dev_type)
 
     def connect_device(self, addr=""):
@@ -71,24 +72,29 @@ class iRecorder(Thread):
             self.dev = self.dev_sock(self.__dev_args)
             self.__battery = self.dev.send_heartbeat()
             self._socket_flag = 2
-            self.device_queue.put(True)
+            self.info_q.put(True)
             self.__status = IDLE_START
             self.parser = Parser(
                 self.__dev_args["channel"], self.__dev_args["fs"], self._save_data
             )
             self.start()
-        except Exception:
+        except Exception as e:
             traceback.print_exc()
+            self.info_q.put(str(e))
             self._socket_flag = 6
             if self._interface.is_alive():
                 self._interface.join()
-            raise Exception("Failed to connect device")
+            raise Exception(str(e))
 
-    def _get_devices(self, verbose=True):
+    def get_devs(self, verbose=False) -> list:
         ret = []
-        while not self.device_queue.empty():
-            info = self.device_queue.get()
+        while not self.info_q.empty():
+            info = self.info_q.get()
             if isinstance(info, list):
+                if len(info) == 1:
+                    print(f"Interface: {info[-1]}")
+                    if not verbose:
+                        continue
                 ret.append(info if verbose else info[-1])
             elif isinstance(info, bool):
                 if verbose:
@@ -97,8 +103,14 @@ class iRecorder(Thread):
                 raise Exception(info)
         return ret
 
-    def find_device(self, duration=None):
-        # start searching devie
+    def find_devs(self, duration=Optional[int]) -> Optional[list]:
+        """
+        Parameters
+        ----------
+        duration : Optional[int], default=None
+            search interval, if not None, block for duration seconds and return found devices,
+            if set to None, return immediately, devices can be later acquired by calling get_devs()
+        """
         if self.is_alive():
             raise Exception("iRecorder already connected.")
         self._socket_flag = 1
@@ -106,7 +118,7 @@ class iRecorder(Thread):
         self._interface.start()
         if duration is not None:
             self._interface.join()
-            return self._get_devices(verbose=False)
+            return self.get_devs()
 
     def start_acquisition_data(self) -> Optional[True]:
         if self.__status == TERMINATE:
@@ -119,6 +131,8 @@ class iRecorder(Thread):
 
     def get_data(self):
         if self._socket_flag != 2:
+            if self.is_alive():
+                self.close_dev()
             raise Exception(f"{self.__get_sock_error()}")
         data = []
         while not self._save_data.empty():

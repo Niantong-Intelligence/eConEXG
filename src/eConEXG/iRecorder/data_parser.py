@@ -81,9 +81,11 @@ class Parser:
             data.append(frame[self._trigger])
             frames.append(data)
         if frames:
+            del self.__buffer[: frame_obj.end()]
+            self.batt_val = frame[self._battery]
             if self.imp_flag:
                 self._cal_imp(frames)
             else:
                 self.queue.put(frames)
-            del self.__buffer[: frame_obj.end()]
-            self.batt_val = frame[self._battery]
+                return frames
+

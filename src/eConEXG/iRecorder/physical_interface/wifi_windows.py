@@ -26,14 +26,12 @@ class wifiWindows(Thread):
                 break
         if interface is None:
             warn = "Wi-Fi interface not found, please insert a USB interface card."
-            self.device_queue.put(warn)
             raise Exception(warn)
         self.__interface = interface
         try:
             self.__interface.scan_results()
         except Exception:
             warn = "Wi-Fi interface disabled, please enable it in system setting."
-            self.device_queue.put(warn)
             raise Exception(warn)
 
     def run(self):
@@ -105,9 +103,8 @@ class wifiWindows(Thread):
                 else:
                     break
             print("...Retry connecting:", i + 1)
-        warn = "Wi-Fi connection failed, please retry.\nFor encrypted device, connect through system wifi setting first."
-        self.device_queue.put(warn)
         if any(sub in self.__interface.name() for sub in ["USB", "usb"]):
             self.__interface.remove_all_network_profiles()
             self.__interface.disconnect()
-        return False
+        warn = "Wi-Fi connection failed, please retry.\nFor encrypted device, connect through system wifi setting first."
+        raise Exception(warn)

@@ -16,7 +16,7 @@ class bt(Thread):
 
     def validate_interface(self):
         try:
-            print([str(bluetooth.read_local_bdaddr())])
+            self.device_queue.put([str(bluetooth.read_local_bdaddr())])
         except Exception:
             warn = "Bluetooth card disabled or not inserted, please enable it in system setting."
             raise Exception(warn)
@@ -54,7 +54,6 @@ class bt(Thread):
         service_matches = bluetooth.find_service(uuid=uuid, address=addr)
         if len(service_matches) == 0:
             warn = "Bluetooth connection failed, please retry."
-            self.device_queue.put(warn)
             raise Exception(warn)
         device = service_matches[0]
         return (device["host"], device["port"])

@@ -4,7 +4,7 @@ import time
 if __name__ == "__main__":
     dev = iRecorder(dev_type="W16")
     # dev.find_device()
-    # ret=dev.find_device(duration=5)
+    ret=dev.find_devs(duration=5)
     # print(ret)
     dev.connect_device("88:6B:0F:8A:64:69")
     dev.start_acquisition_data()
