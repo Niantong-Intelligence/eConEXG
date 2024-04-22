@@ -1,8 +1,8 @@
 from serial.tools.list_ports import comports
 from queue import Queue
 from threading import Thread
-
 import time
+# from platform import system
 
 
 class com(Thread):
@@ -13,12 +13,14 @@ class com(Thread):
 
     def run(self):
         added_devices = set()
+        # platf = system()
         while self.__search_flag:
             nearby_devices = comports()
             for device in nearby_devices:
                 if not (device.pid == 0x5740 and device.vid == 0x0483):
                     continue
                 name = device.device
+                # if platf in ["Windows", "Darwin"] else device.name
                 if name not in added_devices:
                     added_devices.add(name)
                     self.device_queue.put([f"iRe-{device.serial_number}", name, name])

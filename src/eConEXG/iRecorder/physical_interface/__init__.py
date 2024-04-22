@@ -20,6 +20,8 @@ def get_interface(TYPE):
             from .wifi_windows import wifiWindows as phy_interface
         elif system() == "Darwin":
             from .wifi_macos import wifiMACOS as phy_interface
+        elif system() == "Linux":
+            from .wifi_linux import wifiLinux as phy_interface
         else:
             raise NotImplementedError("Unsupported platform")
 

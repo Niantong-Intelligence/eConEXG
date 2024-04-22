@@ -220,6 +220,10 @@ class iRecorder(Thread):
     def get_impedance(self) -> Optional[list]:
         """
         Aquire channel impedances, return immediatly, impedance update interval is about 2000ms
+
+        Returns
+        -------
+        List of channel impedance, range from `0` to `np.inf`.
         """
         if self.__socket_flag:
             if self.is_alive():
@@ -246,7 +250,7 @@ class iRecorder(Thread):
 
         Returns
         -------
-        battery level in percentage, range from 0 to 100.
+        battery level in percentage, range from `0` to `100`.
         """
         return self.__parser.batt_val
 
@@ -262,7 +266,7 @@ class iRecorder(Thread):
 
         self._lsl_stream = lslSender(
             self.__dev_args["ch_info"],
-            f"iRe{self.__dev_args['interface']}_{self.__dev_args["name"]}",
+            f"iRe{self.__dev_args['interface']}_{self.__dev_args['name']}",
             "EEG",
             self.__dev_args["fs"],
             with_trigger=True,
