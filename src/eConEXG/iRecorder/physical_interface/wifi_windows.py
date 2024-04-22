@@ -9,10 +9,9 @@ from traceback import print_exc
 
 
 class wifiWindows(Thread):
-    def __init__(self, device_queue: Queue, duration=3):
+    def __init__(self, device_queue: Queue):
         super().__init__(daemon=True)
         self.device_queue = device_queue
-        self.duration = duration
         self.port = 4321
         self.__search_flag = True
         self.__interface = None
@@ -38,10 +37,14 @@ class wifiWindows(Thread):
         self.device_queue.put([str(self.__interface.name())])
         added_devices = set()
         search_interval = 0
-        start=time.time()
         while self.__search_flag:
+            dur = time.time()
             self.__interface.scan()
-            time.sleep(min(search_interval + 0.5, 5))
+            search_interval = min(search_interval + 0.5, 5)
+            while time.time() - dur < search_interval:
+                if not self.__search_flag:
+                    return
+                time.sleep(0.5)
             devices = self.__interface.scan_results()
             for device in devices:
                 if "iRe" not in device.ssid:
@@ -49,13 +52,6 @@ class wifiWindows(Thread):
                 if device.ssid not in added_devices:
                     added_devices.add(device.ssid)
                     self.device_queue.put([device.ssid, device.bssid[:-1], device.ssid])
-            if self.duration is None:
-                continue
-            if time.time()-start>self.duration:
-                break
-
-    def stop(self):
-        self.__search_flag = False
 
     def _get_default_gateway(self):  # TODO: some problems under multiple interfaces
         gateways = netifaces.gateways()
@@ -81,8 +77,11 @@ class wifiWindows(Thread):
             return None
         return None
 
-    def connect(self, ssid):
+    def stop(self):
         self.__search_flag = False
+
+    def connect(self, ssid):
+        self.stop()
         if self._get_connected_wifi_name() == ssid:  # return if connected
             host = self._get_default_gateway()
             if host is not None:

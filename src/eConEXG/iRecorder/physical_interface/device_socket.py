@@ -34,7 +34,7 @@ class wifi_socket:
 
     def send_heartbeat(self):
         self.__socket.send(b"B")
-        bettery = int.from_bytes(self.recv_socket(1),byteorder="big")
+        bettery = int.from_bytes(self.recv_socket(1), byteorder="big")
         return bettery
 
 
@@ -89,6 +89,7 @@ class com_socket:
 
     def __init__(self, sock_args) -> None:
         from serial import Serial
+
         self.command_wait = 0.01
         self.__sock_args = sock_args
         self.__socket = Serial(timeout=5)

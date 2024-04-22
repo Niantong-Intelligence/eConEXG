@@ -65,7 +65,7 @@ class Parser:
             self.__last_num = cur_num
 
             channels = [
-                int.from_bytes(raw[i : i + self.ch_bytes], signed=True,byteorder='big')
+                int.from_bytes(raw[i : i + self.ch_bytes], signed=True, byteorder="big")
                 for i in range(
                     0,
                     len(raw) - self.imu_channels * self.bytes_per_imu,
@@ -76,7 +76,9 @@ class Parser:
             if self.imu:
                 raw = raw[-self.imu_channels * self.bytes_per_imu :]
                 imu_data = [
-                    int.from_bytes(raw[i : i + self.bytes_per_imu], signed=True,byteorder='big')
+                    int.from_bytes(
+                        raw[i : i + self.bytes_per_imu], signed=True, byteorder="big"
+                    )
                     for i in range(0, len(raw), self.bytes_per_imu)
                 ]
 

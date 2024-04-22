@@ -9,12 +9,13 @@ import time
 class wifiMACOS(Thread):
     PATH_OF_AIRPORT = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
 
-    def __init__(self, device_queue: Queue, *arg, **args):
+    def __init__(self, device_queue: Queue):
         super().__init__(daemon=True)
         self.device_queue = device_queue
         self.port = 4321
+        self.validate_interface()
 
-    def _find_interface(self):
+    def validate_interface(self):
         out = subprocess.check_output(["networksetup", "-listallhardwareports"])
         interfaces = out.decode(locale.getpreferredencoding()).split("\n\n")
         for iface in interfaces:
@@ -27,7 +28,7 @@ class wifiMACOS(Thread):
                 self.iface = line.split(":")[1].strip()
                 self.device_queue.put([str(self.iface)])
                 return
-        raise Exception
+        raise Exception("Wi-Fi interface not found")
 
     def _get_default_gateway(self):
         time.sleep(1)
@@ -37,11 +38,8 @@ class wifiMACOS(Thread):
                 return ips[0]
 
     def run(self):
-        try:
-            self._find_interface()
-        except Exception:
-            self.device_queue.put("Wi-Fi interface not found")
         added_devices = set()
+        # TODO: WARNING: The airport command line tool is deprecated and will be removed in a future release.
         command = [self.PATH_OF_AIRPORT, "-s"]
         self.child_process = subprocess.Popen(command, stdout=subprocess.PIPE)
         result, _ = self.child_process.communicate()
@@ -60,13 +58,12 @@ class wifiMACOS(Thread):
                 self.device_queue.put([ssid, "", ssid])
 
     def stop(self):
-        if self.child_process.poll() is None:
-            self.child_process.wait()
+        if hasattr(self, "child_process"):
+            if self.child_process.poll() is None:
+                self.child_process.wait()
 
     def connect(self, ssid):
         self.stop()
-        if not ssid:
-            return False
         # check if network already connected
         command = ["networksetup", "-getairportnetwork", self.iface]
         result = subprocess.check_output(command)
@@ -86,5 +83,5 @@ class wifiMACOS(Thread):
             if host:
                 return (host, self.port)
         else:
-            self.device_queue.put(result)
-            return False
+            warn = "Wi-Fi connection failed, please retry.\nFor encrypted device, connect through system setting first."
+            raise Exception(warn)

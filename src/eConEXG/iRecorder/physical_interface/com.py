@@ -3,16 +3,16 @@ from queue import Queue
 from threading import Thread
 
 import time
+
+
 class com(Thread):
-    def __init__(self, device_queue: Queue , duration=3):
+    def __init__(self, device_queue: Queue):
         super().__init__(daemon=True)
         self.device_queue = device_queue
-        self.duration = duration
         self.__search_flag = True
 
     def run(self):
         added_devices = set()
-        start=time.time()
         while self.__search_flag:
             nearby_devices = comports()
             for device in nearby_devices:
@@ -21,13 +21,12 @@ class com(Thread):
                 name = device.device
                 if name not in added_devices:
                     added_devices.add(name)
-                    self.device_queue.put([ f"iRe-{device.serial_number}",name, name])
+                    self.device_queue.put([f"iRe-{device.serial_number}", name, name])
             time.sleep(0.5)
-            if self.duration is None:
-                continue
-            if time.time()-start>self.duration:
-                break
+
+    def stop(self):
+        self.__search_flag = False
 
     def connect(self, port):
-        self.__search_flag = False
+        self.stop()
         return port

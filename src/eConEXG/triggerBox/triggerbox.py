@@ -55,6 +55,7 @@ class lightStimulator:
     def __init__(self) -> None:
         from serial import Serial
         from serial.tools.list_ports import comports
+
         self.wait_time = 0.1
         self.channels = 6
         ports = comports()

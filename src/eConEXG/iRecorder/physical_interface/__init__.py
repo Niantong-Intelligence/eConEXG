@@ -8,10 +8,10 @@ def get_interface(TYPE):
     DEVTYPE = TYPE
     if TYPE in ["W8", "W16"]:
         if system() == "Windows":
-            from .bluetooth import bt as phy_interface
-            from . import bluetooth
+            from .bt import bt as phy_interface
+            from . import bt
 
-            bluetooth.CHANNELS = 8 if TYPE == "W8" else 16
+            bt.CHANNELS = 8 if TYPE == "W8" else 16
         else:
             raise NotImplementedError("Unsupported platform")
 
