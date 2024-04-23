@@ -11,6 +11,10 @@ class com(Thread):
         self.device_queue = device_queue
         self.__search_flag = True
 
+    @property
+    def interface(self):
+        return "COM"
+
     def run(self):
         added_devices = set()
         # platf = system()

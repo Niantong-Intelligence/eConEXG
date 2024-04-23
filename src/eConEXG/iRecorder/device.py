@@ -41,12 +41,13 @@ class iRecorder(Thread):
         self.__status = iRecorder.Dev.TERMINATE
         self.__lsl_flag = False
         self.__bdf_flag = False
-        self.__dev_args = {"channel": 0, "fs": fs, "interface": dev_type}
-        self.__validate_dev(dev_type, fs)
-        self.__parser = Parser(self.__dev_args["channel"], self.__dev_args["fs"])
-        self.update_channels()
+
         self._interface = get_interface(dev_type)(self.__info_q)
         self.dev_sock = get_sock(dev_type)
+        self.__dev_args = self.__validate_dev(dev_type, fs)
+        self.__dev_args.update({"Interface": self._interface.interface})
+        self.__parser = Parser(self.__dev_args["channel"], self.__dev_args["fs"])
+        self.update_channels()
 
     def find_devs(self, duration: Optional[int] = None) -> Optional[list]:
         """
@@ -83,10 +84,6 @@ class iRecorder(Thread):
         while not self.__info_q.empty():
             info = self.__info_q.get()
             if isinstance(info, list):
-                if len(info) == 1:
-                    print(f"Interface: {info[-1]}")
-                    if not verbose:
-                        continue
                 ret.append(info if verbose else info[-1])
             elif isinstance(info, bool):
                 if verbose:
@@ -147,7 +144,9 @@ class iRecorder(Thread):
         if self.__status not in [iRecorder.Dev.IDLE, iRecorder.Dev.TERMINATE]:
             raise Exception("Device acquisition in progress, please stop first.")
         if channels is None:
-            channels = {i: f"Ch{i}" for i in range(self.__dev_args["channel"])}
+            from .default_config import getChannels
+
+            channels = getChannels(self.__dev_args["channel"])
         self.__dev_args.update({"ch_info": channels})
         ch_idx = [i for i in channels.keys()]
         self.__parser.update_chs(ch_idx)
@@ -266,7 +265,7 @@ class iRecorder(Thread):
 
         self._lsl_stream = lslSender(
             self.__dev_args["ch_info"],
-            f"iRe{self.__dev_args['interface']}_{self.__dev_args['name']}",
+            f"iRe{self.__dev_args['type']}_{self.__dev_args['name']}",
             "EEG",
             self.__dev_args["fs"],
             with_trigger=True,
@@ -302,7 +301,7 @@ class iRecorder(Thread):
             filename,
             self.__dev_args["ch_info"],
             self.__dev_args["fs"],
-            f"iRecorder{self.__dev_args['interface']}",
+            f"iRecorder{self.__dev_args['type']}",
         )
         self.__bdf_flag = True
 
@@ -389,7 +388,7 @@ class iRecorder(Thread):
                         self._lsl_stream.push_chuck(ret)
             except Exception:
                 traceback.print_exc()
-                if (self.__dev_args["interface"] == "W32") and (retry < 1):
+                if (self.__dev_args["type"] == "W32") and (retry < 1):
                     try:
                         print("Wi-Fi reconnecting...")
                         time.sleep(3)
@@ -435,23 +434,25 @@ class iRecorder(Thread):
                 self.__socket_flag = 5
                 self.__status = iRecorder.Dev.TERMINATE_START
 
-    def __validate_dev(self, dev_type, fs):
+    def __validate_dev(self, dev_type, fs) -> dict:
+        dev_args = {"fs": fs, "type": dev_type}
         if dev_type != "USB32" and fs != 500:
             print("optional fs only available to USB32 devices, set to 500")
             fs = 500
         if fs not in [500, 1000, 2000]:
             raise ValueError("fs should be in 500, 1000 or 2000")
-        self.__dev_args.update({"fs": fs})
+        dev_args.update({"fs": fs})
         if dev_type == "W8":
-            self.__dev_args.update({"channel": 8})
+            dev_args.update({"channel": 8})
         elif dev_type == "W16":
-            self.__dev_args.update({"channel": 16})
+            dev_args.update({"channel": 16})
         elif dev_type == "W32":
-            self.__dev_args.update({"channel": 32})
+            dev_args.update({"channel": 32})
         elif dev_type == "USB32":
-            self.__dev_args.update({"channel": 32})
+            dev_args.update({"channel": 32})
         else:
             raise ValueError("Invalid device type")
+        return dev_args
 
     def __finish_search(self):
         if self._interface.is_alive():

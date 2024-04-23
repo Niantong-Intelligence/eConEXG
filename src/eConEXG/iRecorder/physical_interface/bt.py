@@ -11,11 +11,15 @@ class bt(Thread):
         super().__init__(daemon=True)
         self.device_queue = device_queue
         self.__search_flag = True
-        self.validate_interface()
+        self.__interface = self.validate_interface()
+
+    @property
+    def interface(self):
+        return self.__interface
 
     def validate_interface(self):
         try:
-            self.device_queue.put([str(bluetooth.read_local_bdaddr())])
+            return str(bluetooth.read_local_bdaddr())
         except Exception:
             warn = "Bluetooth card disabled or not inserted, please enable it in system setting."
             raise Exception(warn)

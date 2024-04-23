@@ -15,10 +15,9 @@ class wifi_socket:
     def close_socket(self):
         try:
             self.__socket.shutdown(2)
-        except Exception:
-            print("wifi-socket shutdown failed")
-        self.__socket.close()
-        self.__socket = None
+        finally:
+            self.__socket.close()
+            self.__socket = None
 
     def start_impe(self):
         self.__socket.send(b"Z")

@@ -13,7 +13,11 @@ class wifiMACOS(Thread):
         super().__init__(daemon=True)
         self.device_queue = device_queue
         self.port = 4321
-        self.validate_interface()
+        self.__interface = self.validate_interface()
+
+    @property
+    def interface(self):
+        return self.__interface
 
     def validate_interface(self):
         out = subprocess.check_output(["networksetup", "-listallhardwareports"])
@@ -26,8 +30,7 @@ class wifiMACOS(Thread):
                 if "Device" not in line:
                     continue
                 self.iface = line.split(":")[1].strip()
-                self.device_queue.put([str(self.iface)])
-                return
+                return str(self.iface)
         raise Exception("Wi-Fi interface not found")
 
     def _get_default_gateway(self):

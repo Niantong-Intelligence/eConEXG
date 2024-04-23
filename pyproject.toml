@@ -44,6 +44,12 @@ only-include = ["src"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/eConEXG"]
+artifacts= [
+    "*.so",
+    "*.pyd",
+    "*.dll",
+    "*.dylib",
+]
 
 [tool.hatch.publish.index]
 disable = true

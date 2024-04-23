@@ -9,13 +9,16 @@ from traceback import print_exc
 
 
 class wifiWindows(Thread):
-    def __init__(self, device_queue: Queue):
+    def __init__(self, device_queue: Queue) -> str:
         super().__init__(daemon=True)
         self.device_queue = device_queue
         self.port = 4321
         self.__search_flag = True
-        self.__interface = None
-        self.validate_interface()
+        self.__interface = self.validate_interface()
+
+    @property
+    def interface(self):
+        return self.__interface
 
     def validate_interface(self):
         wifi = pywifi.PyWiFi()
@@ -26,26 +29,26 @@ class wifiWindows(Thread):
         if interface is None:
             warn = "Wi-Fi interface not found, please insert a USB interface card."
             raise Exception(warn)
-        self.__interface = interface
+        self.__iface = interface
         try:
-            self.__interface.scan_results()
+            self.__iface.scan_results()
         except Exception:
             warn = "Wi-Fi interface disabled, please enable it in system setting."
             raise Exception(warn)
+        return str(self.__iface.name())
 
     def run(self):
-        self.device_queue.put([str(self.__interface.name())])
         added_devices = set()
         search_interval = 0
         while self.__search_flag:
             dur = time.time()
-            self.__interface.scan()
+            self.__iface.scan()
             search_interval = min(search_interval + 0.5, 5)
             while time.time() - dur < search_interval:
                 if not self.__search_flag:
                     return
                 time.sleep(0.5)
-            devices = self.__interface.scan_results()
+            devices = self.__iface.scan_results()
             for device in devices:
                 if "iRe" not in device.ssid:
                     continue
@@ -56,11 +59,11 @@ class wifiWindows(Thread):
     def _get_default_gateway(self):  # TODO: some problems under multiple interfaces
         gateways = netifaces.gateways()
         for ips in gateways[netifaces.AF_INET]:
-            if ips[1] == str(self.__interface._raw_obj["guid"]):
+            if ips[1] == str(self.__iface._raw_obj["guid"]):
                 return ips[0]
 
     def _get_connected_wifi_name(self):
-        iface = str(self.__interface._raw_obj["guid"])[1:-1]
+        iface = str(self.__iface._raw_obj["guid"])[1:-1]
         try:
             output = subprocess.check_output(
                 ["netsh", "wlan", "show", "interfaces"], creationflags=0x08000000
@@ -86,24 +89,22 @@ class wifiWindows(Thread):
             host = self._get_default_gateway()
             if host is not None:
                 return (host, self.port)
-        self.__interface.disconnect()
+        self.__iface.disconnect()
         time.sleep(2)
         profile = pywifi.Profile()
         profile.ssid = ssid
-        profile = self.__interface.add_network_profile(profile)
+        profile = self.__iface.add_network_profile(profile)
         for i in range(5):
-            self.__interface.connect(profile)
+            self.__iface.connect(profile)
             time.sleep(0.5 * (i + 1))
-            if self.__interface.status() == pywifi.const.IFACE_CONNECTED:
+            if self.__iface.status() == pywifi.const.IFACE_CONNECTED:
                 time.sleep(1)
                 host = self._get_default_gateway()
                 if host is not None:
                     return (host, self.port)
-                else:
-                    break
             print("...Retry connecting:", i + 1)
-        if any(sub in self.__interface.name() for sub in ["USB", "usb"]):
-            self.__interface.remove_all_network_profiles()
-            self.__interface.disconnect()
+        if any(sub in self.__iface.name() for sub in ["USB", "usb"]):
+            self.__iface.remove_all_network_profiles()
+            self.__iface.disconnect()
         warn = "Wi-Fi connection failed, please retry.\nFor encrypted device, connect through system wifi setting first."
         raise Exception(warn)

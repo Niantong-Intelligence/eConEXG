@@ -2,19 +2,22 @@ from eConEXG import iRecorder
 import time
 
 if __name__ == "__main__":
-    dev = iRecorder(dev_type="W32", fs=2000)
+    dev = iRecorder(dev_type="W8", fs=2000)
+    print(dev.get_dev_info())
+
+    # dev.connect_device("iRe-E5C1EF")
+    """Alternatively, one can search devices first and connect to the desired one."""
     ret = dev.find_devs(duration=5)
     print(ret)
     dev.connect_device(ret[0])
-    # dev.update_channels({0:'aa',1:'bb'})
-    print(dev.get_dev_info())
+
     dev.start_acquisition_data()
     # dev.save_bdf_file("test.bdf")
     # dev.open_lsl_stream()
     start = time.time()
     first_data = None
     count = 0
-    duration = 20
+    duration = 10
     while time.time() - start < duration:
         frames = dev.get_data(timeout=0.02)
         for frame in frames:
