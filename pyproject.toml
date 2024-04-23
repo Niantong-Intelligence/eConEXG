@@ -2,7 +2,7 @@
 name = "eConEXG"
 dynamic = ["version"]
 authors = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
-
+maintainers = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
 description = "Add your description here"
 dependencies = [
     "numpy",
@@ -40,16 +40,14 @@ dev-dependencies = ["pytest>=8.1.1"]
 allow-direct-references = true
 
 [tool.hatch.build.targets.sdist]
-only-include = ["src"]
+include = ["src"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/eConEXG"]
-artifacts= [
-    "*.so",
-    "*.pyd",
-    "*.dll",
-    "*.dylib",
-]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/eConEXG/iRecorder/physical_interface/bluetooth/windows" = "bluetooth"
+
 
 [tool.hatch.publish.index]
 disable = true

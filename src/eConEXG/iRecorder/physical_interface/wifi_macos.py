@@ -70,11 +70,12 @@ class wifiMACOS(Thread):
         # check if network already connected
         command = ["networksetup", "-getairportnetwork", self.iface]
         result = subprocess.check_output(command)
-        result = result.decode(locale.getpreferredencoding())
-        if result.split(":")[1].strip() == ssid:
-            host = self._get_default_gateway()
-            if host:
-                return (host, self.port)
+        result = result.decode(locale.getpreferredencoding()).split(":")
+        if len(result) > 1:
+            if result[1].strip() == ssid:
+                host = self._get_default_gateway()
+                if host:
+                    return (host, self.port)
         # connect
         command = ["networksetup", "-setairportnetwork", self.iface, ssid]
         self.child_process = subprocess.Popen(command, stdout=subprocess.PIPE)

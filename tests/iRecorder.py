@@ -8,7 +8,7 @@ if __name__ == "__main__":
     # dev.connect_device("iRe-E5C1EF")
     """Alternatively, one can search devices first and connect to the desired one."""
     ret = dev.find_devs(duration=5)
-    print(ret)
+    print(f"Devs: {ret}")
     dev.connect_device(ret[0])
 
     dev.start_acquisition_data()
@@ -17,7 +17,7 @@ if __name__ == "__main__":
     start = time.time()
     first_data = None
     count = 0
-    duration = 10
+    duration = 20
     while time.time() - start < duration:
         frames = dev.get_data(timeout=0.02)
         for frame in frames:
