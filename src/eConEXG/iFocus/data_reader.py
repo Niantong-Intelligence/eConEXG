@@ -1,122 +1,186 @@
 import time
-from multiprocessing import Process, Queue, Value
-from typing import Literal
-from serial.tools.list_ports import comports
+import queue
+from queue import Queue
+from threading import Thread
+from typing import Optional
+from enum import Enum
+from .eegParser import Parser
+from .device_socket import sock
+import traceback
 
-CAP_SIGNAL = 10
-CAP_END = 101
-CAP_TERMINATED = 102
 
+class iFocus(Thread):
+    class Dev(Enum):
+        SIGNAL = 10
+        SIGNAL_START = 11
+        IDLE = 30
+        IDLE_START = 31
+        TERMINATE = 40
+        TERMINATE_START = 41
 
-class iFocus(Process):
-    @staticmethod
-    def get_device(dev_type: Literal["EEG", "EMG"] = "EMG"):
-        devices = list(comports())
-        if dev_type == "EMG":
-            for device in devices:
-                if "FTDI" in device.manufacturer:
-                    if device.serial_number in ["IFOCUSA", "iFocus"]:
-                        continue
-                    return device.device
-        else:
-            for device in devices:
-                if "FTDI" in device.manufacturer:
-                    if device.serial_number in ["IFOCUSA", "iFocus"]:
-                        return device.device
-        return None
-
-    def __init__(
-        self, port, socket_flag: Value, dev_type: Literal["EEG", "EMG"] = "EMG"
-    ):
-        print("initing device")
-        Process.__init__(self, daemon=True)
-        self.port = port
-        self.socket_flag = socket_flag
-        self.dev_type = dev_type
-        self.bat = Value("i", -1)
-        self.__raw_data = Queue()
-        self.__cap_status = Value("i", CAP_TERMINATED)
+    def __init__(self, port: Optional[str]):
+        """
+        Parameters
+        ----------
+        port: str | None
+            if not given, connect to the first available device
+        """
+        super().__init__(daemon=True)
+        if port is None:
+            port = self.find_devs()
+        self.__save_data = Queue()
+        self.__parser = Parser()
+        self.dev = sock(port)
+        self.__socket_flag = 1
+        try:
+            self.dev.connect_socket()
+        except Exception as e:
+            try:
+                self.dev.close_socket()
+            finally:
+                raise e
+        self.__status = iFocus.Dev.IDLE_START
+        self.__socket_flag = 0
         self.start()
 
+    @staticmethod
+    def find_devs():
+        from serial.tools.list_ports import comports
+
+        devices = comports()
+        for device in devices:
+            if "FTDI" in device.manufacturer:
+                if device.serial_number in ["IFOCUSA", "iFocus"]:
+                    return device.device
+        raise Exception("iFocus device not found")
+
     def get_battery_value(self):
-        if (self.bat.value < 0) or (self.bat.value > 100):
-            self.bat.value = -1
-        return self.bat.value
+        """
+        Query battery level.
 
-    def get_data(self):
-        data = []
-        while not self.__raw_data.empty():
-            temp = self.__raw_data.get()
-            data.append(temp)
-        return data  # (length, channels)
+        Returns
+        -------
+        battery level in percentage, range from `0` to `100`.
+        """
+        return self.__parser.bat
 
-    def close_cap(self):
-        if self.__cap_status.value == CAP_TERMINATED:
+    def get_data(self, timeout: Optional[float] = None) -> Optional[list]:
+        try:
+            data: list = self.__save_data.get(block=timeout)
+        except queue.Empty:
             return
-        # ensure socket is closed correctly
-        self.__cap_status.value = CAP_END
-        while self.__cap_status.value != CAP_TERMINATED:
-            time.sleep(0.05)
+        while not self.__save_data.empty():
+            data.extend(self.__save_data.get())
+        return data
 
-    def __socket_recv(self):
-        while self.__cap_status.value in [CAP_SIGNAL]:
+    def start_acquisition_data(self) -> Optional[True]:
+        """
+        Send data acquisition command to device, block until data acquisition started or failed.
+        """
+        if self.__status == iFocus.Dev.TERMINATE:
+            self.__raise_sock_error()
+        if self.__status == iFocus.Dev.SIGNAL:
+            return True
+        self.__status = iFocus.Dev.SIGNAL_START
+        while self.__status not in [iFocus.Dev.SIGNAL, iFocus.Dev.TERMINATE]:
+            time.sleep(0.01)
+        if self.__status != iFocus.Dev.SIGNAL:
+            self.__raise_sock_error()
+
+    def stop_acquisition(self) -> Optional[True]:
+        """
+        Stop data or impedance acquisition, block until data acquisition stopped or failed.
+        """
+        if self.__status == iFocus.Dev.TERMINATE:
+            self.__raise_sock_error()
+        self.__status = iFocus.Dev.IDLE_START
+        while self.__status not in [iFocus.Dev.IDLE, iFocus.Dev.TERMINATE]:
+            time.sleep(0.01)
+        if self.__status != iFocus.Dev.IDLE:
+            self.__raise_sock_error()
+
+    def close_dev(self):
+        """
+        Close device connection and release resources.
+        """
+        if self.__status != iFocus.Dev.TERMINATE:
+            # ensure socket is closed correctly
+            self.__status = iFocus.Dev.TERMINATE_START
+            while self.__status != iFocus.Dev.TERMINATE:
+                time.sleep(0.1)
+        if self.is_alive():
+            self.join()
+
+    def __recv_data(self):
+        try:
+            self.dev.start_data()
+            self.__status = iFocus.Dev.SIGNAL
+        except Exception:
+            print("SIGNAL START FAILED!")
+            self.__socket_flag = 4
+            self.__status = iFocus.Dev.TERMINATE_START
+
+        print("SIGNAL START")
+        while self.__status in [iFocus.Dev.SIGNAL]:
             try:
-                data = self.__socket.recv_socket()
-                if not len(data):
-                    raise Exception
-                self.__recv_queue.put(data)
+                data = self.dev.recv_socket()
+                ret = self.__parser.parse_data(data)
+                if ret:
+                    self.__save_data.put(ret)
             except Exception:
-                self.socket_flag.value = 3
-                self.__cap_status.value = CAP_END
+                traceback.print_exc()
+                self.__socket_flag = 3
+                self.__status = iFocus.Dev.TERMINATE_START
+
+        # clear buffer
+        self.__parser.clear_buffer()
+        self.__save_data.put(None)
+        while self.__save_data.get() is not None:
+            continue
+        # stop recv data
+        if self.__status != iFocus.Dev.TERMINATE_START:
+            try:  # stop data acquisition when thread ended
+                self.dev.stop_recv()
+            except Exception:
+                if self.__status == iFocus.Dev.IDLE_START:
+                    self.__socket_flag = 5
+                self.__status = iFocus.Dev.TERMINATE_START
+        print("Data thread closed")
 
     def run(self):
-        import queue
-        import threading
-        import traceback
-
-        if self.dev_type == "EMG":
-            from .emgParser import Parser
-            from .device_socket import econAlpha as dev
-        else:
-            from .eegParser import Parser
-            from .device_socket import iFocus as dev
-        print("port:", self.port)
-        try:
-            self.__socket = dev(port=self.port)
-            self.__socket.connect_socket()
-        except Exception:
-            traceback.print_exc()
-            try:
-                self.__socket.close_socket()
-            except Exception:
-                pass
-            self.socket_flag.value = 4
-            time.sleep(0.1)
-            return
-        print("device connected!")
-        self._parser = Parser(self.bat)
-        self.__recv_queue = queue.Queue()
-        self.__cap_status.value = CAP_SIGNAL
-        self.__recv_thread = threading.Thread(target=self.__socket_recv, daemon=True)
-        self.__recv_thread.start()
-        while True:
-            time.sleep(0.01)
-            if self.__cap_status.value == CAP_SIGNAL:
-                while not self.__recv_queue.empty():
-                    data = self.__recv_queue.get()
-                    data_list = self._parser.parse(data)
-                    if len(data_list):
-                        for data in data_list:
-                            self.__raw_data.put(data)
-                    if self.__cap_status.value != CAP_SIGNAL:
-                        break
-            elif self.__cap_status.value == CAP_END:
-                self.__recv_thread.join()
-                try:
-                    self.__socket.close_socket()
-                finally:
-                    self.__cap_status.value = CAP_TERMINATED
-                    print("device closed")
-                    return
+        while self.__status != iFocus.Dev.TERMINATE_START:
+            if self.__status == iFocus.Dev.SIGNAL_START:
+                self.__recv_data()
+            elif self.__status == iFocus.Dev.IDLE_START:
+                self.dev.stop_recv()
+                self.__status = iFocus.Dev.IDLE
+                while self.__status == iFocus.Dev.IDLE:
+                    time.sleep(0.1)
             else:
-                pass
+                print(f"Unknown status: {self.__status}")
+                break
+        try:
+            self.dev.close_socket()
+        except Exception:
+            print("socket close failed")
+        finally:
+            self.__status = iFocus.Dev.TERMINATE
+            print("iFocus disconnected")
+
+    def __raise_sock_error(self):
+        if self.__socket_flag == 0:
+            return
+        if self.is_alive():
+            self.close_dev()
+        if self.__socket_flag == 1:
+            raise Exception("Device not connected, please connect first.")
+        elif self.__socket_flag == 2:
+            raise Exception("Device connection failed.")
+        elif self.__socket_flag == 3:
+            raise Exception("Data transmission timeout.")
+        elif self.__socket_flag == 4:
+            raise Exception("Data/Impedance mode initialization failed.")
+        elif self.__socket_flag == 5:
+            raise Exception("Heartbeat package sent failed.")
+        else:
+            raise Exception(f"Unknown error: {self.__socket_flag}")

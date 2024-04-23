@@ -42,10 +42,10 @@ class iRecorder(Thread):
         self.__lsl_flag = False
         self.__bdf_flag = False
 
-        self._interface = get_interface(dev_type)(self.__info_q)
-        self.dev_sock = get_sock(dev_type)
+        self.__interface = get_interface(dev_type)(self.__info_q)
+        self.__dev_sock = get_sock(dev_type)
         self.__dev_args = self.__validate_dev(dev_type, fs)
-        self.__dev_args.update({"Interface": self._interface.interface})
+        self.__dev_args.update({"Interface": self.__interface.interface})
         self.__parser = Parser(self.__dev_args["channel"], self.__dev_args["fs"])
         self.update_channels()
 
@@ -60,9 +60,9 @@ class iRecorder(Thread):
         """
         if self.is_alive():
             raise Exception("iRecorder already connected.")
-        if self._interface.is_alive():
+        if self.__interface.is_alive():
             raise Exception("Search thread already running.")
-        self._interface.start()
+        self.__interface.start()
         if duration is None:
             return
         start = time.time()
@@ -106,20 +106,16 @@ class iRecorder(Thread):
 
         return deepcopy(self.__dev_args)
 
-    def connect_device(self, addr: str) -> tuple[Literal[False], str] | Literal[True]:
+    def connect_device(self, addr: str) -> None:
         """
         Connect to device by address, block until connection is established or failed.
-
-        Returns
-        -------
-        True if connection is established, otherwise False with error message.
         """
         if self.is_alive():
             raise Exception("iRecorder already connected")
         try:
-            ret = self._interface.connect(addr)
+            ret = self.__interface.connect(addr)
             self.__dev_args.update({"name": addr[-2:], "sock": ret})
-            self.dev = self.dev_sock(self.__dev_args)
+            self.dev = self.__dev_sock(self.__dev_args)
             self.__parser.batt_val = self.dev.send_heartbeat()
             self.__socket_flag = 0
             self.__info_q.put(True)
@@ -393,7 +389,7 @@ class iRecorder(Thread):
                         print("Wi-Fi reconnecting...")
                         time.sleep(3)
                         self.dev.close_socket()
-                        self.dev = self.dev_sock(self.__dev_args, retry_timeout=2)
+                        self.dev = self.__dev_sock(self.__dev_args, retry_timeout=2)
                         retry += 1
                         continue
                     except Exception:
@@ -455,6 +451,6 @@ class iRecorder(Thread):
         return dev_args
 
     def __finish_search(self):
-        if self._interface.is_alive():
-            self._interface.stop()
-            self._interface.join()
+        if self.__interface.is_alive():
+            self.__interface.stop()
+            self.__interface.join()

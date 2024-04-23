@@ -2,7 +2,6 @@ from serial.tools.list_ports import comports
 from queue import Queue
 from threading import Thread
 import time
-# from platform import system
 
 
 class com(Thread):
