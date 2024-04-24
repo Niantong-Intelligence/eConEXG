@@ -2,7 +2,8 @@ from eConEXG import iFocus
 import time
 
 if __name__ == "__main__":
-    dev = iFocus()  # if port not given, it will connect to the first available device
+    # if port not given, it will connect to the first available device
+    dev = iFocus()
     """Alternatively, one can search devices using the find_devs() method and connect to the desired one."""
     # ret=iFocus.find_devs()
     # dev=iFocus(ret[0])

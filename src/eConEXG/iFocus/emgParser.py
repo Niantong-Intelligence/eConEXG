@@ -2,10 +2,10 @@ import re
 
 
 class Parser:
-    def __init__(self, bat) -> None:
+    def __init__(self) -> None:
         self.__buffer = ""
         self.__pattern = re.compile(r"55aa[0-9A-Za-z]{26}00")
-        self.bat = bat
+        self.bat = 0
 
     def __cut(self, data, bytes):
         return [data[i : i + bytes] for i in range(0, len(data), bytes)]
@@ -25,5 +25,5 @@ class Parser:
             dd = [(int(i, 16) - 2048) / 4096 * 3300000 / 2500 for i in d]
             data_list.append(dd)
         if len(frame_list):
-            self.bat.value = int(frame[-4:-2], 16)
+            self.bat = int(frame[-4:-2], 16)
         return data_list  # in uV

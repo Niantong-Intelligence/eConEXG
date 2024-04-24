@@ -4,17 +4,7 @@ dynamic = ["version"]
 authors = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
 maintainers = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
 description = "Add your description here"
-dependencies = [
-    "numpy",
-    "pyserial>=3.5",
-    "pyEDFlib>=0.1.37",
-    "pylsl>=1.16.2",
-    "netifaces;platform_system=='Windows'",
-    "netifaces;platform_system=='Darwin'",
-    "netifaces2;platform_system=='Linux'",
-    "pywifi>=1.1.12;platform_system=='Windows'",
-    "comtypes;platform_system=='Windows'",
-]
+dependencies = ["numpy", "pyserial>=3.5"]
 readme = "README.md"
 requires-python = ">= 3.9"
 classifiers = [
@@ -22,11 +12,24 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+
 [tool.hatch.version]
 path = "src/eConEXG/version.py"
+
 [project.urls]
 Homepage = "https://github.com/Niantong-Intelligence/eConEXG"
 Issues = "https://github.com/Niantong-Intelligence/eConEXG/issues"
+
+[project.optional-dependencies]
+iRecorder = [
+    "pylsl>=1.16.2",
+    "pyEDFlib>=0.1.37",
+    "netifaces;platform_system=='Windows'",
+    "netifaces;platform_system=='Darwin'",
+    "netifaces2;platform_system=='Linux'",
+    "pywifi>=1.1.12;platform_system=='Windows'",
+    "comtypes;platform_system=='Windows'",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -44,10 +47,6 @@ include = ["src"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/eConEXG"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"src/eConEXG/iRecorder/physical_interface/bluetooth/windows" = "bluetooth"
-
 
 [tool.hatch.publish.index]
 disable = true

@@ -62,11 +62,16 @@ class iFocus(Thread):
         Aquire iFocus data, each return list of frames, each frame is made up of 5 eeg data and
         1 imu data in a shape as below:
 
-        [[`ch0_0`], [`ch0_1`], [`ch0_2`], [`ch0_3`], [`ch0_4`], [`imu_x`, `imu_y`, `imu_z`]]
+        [[`eeg_0`], [`eeg_1`], [`eeg_2`], [`eeg_3`], [`eeg_4`], [`imu_x`, `imu_y`, `imu_z`]]
 
         in which number `0~4` after `_` indicates the time order of channel data.
 
         Make sure this function is called in a loop so that it can continuously read the data.
+
+        Data Unit
+        ----------
+        eeg: µV
+        imu: degree(°)
 
         Parameters
         ----------
