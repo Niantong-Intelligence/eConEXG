@@ -24,10 +24,13 @@ class sock:
 
     def start_data(self):
         self.dev.read_all()
+        time.sleep(self.delay)
         self.dev.write(b"\x01")
+        time.sleep(self.delay)
 
     def stop_recv(self):
         self.dev.write(b"\x02")
+        time.sleep(self.delay)
 
     def close_socket(self):
         self.dev.write(b"\x02")

@@ -4,7 +4,7 @@ from queue import Queue
 from threading import Thread
 from typing import Optional
 from enum import Enum
-from .eegParser import Parser
+from .iFocusParser import Parser
 from .device_socket import sock
 import traceback
 
@@ -18,7 +18,7 @@ class iFocus(Thread):
         TERMINATE = 40
         TERMINATE_START = 41
 
-    def __init__(self, port: Optional[str]):
+    def __init__(self, port: Optional[str] = None):
         """
         Parameters
         ----------
@@ -27,7 +27,7 @@ class iFocus(Thread):
         """
         super().__init__(daemon=True)
         if port is None:
-            port = self.find_devs()
+            port = iFocus.find_devs()[0]
         self.__save_data = Queue()
         self.__parser = Parser()
         self.dev = sock(port)
@@ -47,47 +47,57 @@ class iFocus(Thread):
     def find_devs():
         from serial.tools.list_ports import comports
 
+        ret = []
         devices = comports()
         for device in devices:
             if "FTDI" in device.manufacturer:
                 if device.serial_number in ["IFOCUSA", "iFocus"]:
-                    return device.device
-        raise Exception("iFocus device not found")
+                    ret.append(device.device)
+        if len(ret) == 0:
+            raise Exception("iFocus device not found")
+        return ret
 
-    def get_battery_value(self):
+    def get_data(self, timeout: Optional[float] = None) -> list[Optional[list]]:
         """
-        Query battery level.
+        Aquire iFocus data, each return list of frames, each frame is made up of 5 eeg data and
+        1 imu data in a shape as below:
 
-        Returns
-        -------
-        battery level in percentage, range from `0` to `100`.
+        [[`ch0_0`], [`ch0_1`], [`ch0_2`], [`ch0_3`], [`ch0_4`], [`imu_x`, `imu_y`, `imu_z`]]
+
+        in which number `0~4` after `_` indicates the time order of channel data.
+
+        Make sure this function is called in a loop so that it can continuously read the data.
+
+        Parameters
+        ----------
+        timeout:
+            a non-negative number, it blocks at most 'timeout' seconds and return.
         """
-        return self.__parser.bat
-
-    def get_data(self, timeout: Optional[float] = None) -> Optional[list]:
+        if self.__socket_flag:
+            self.__raise_sock_error()
         try:
-            data: list = self.__save_data.get(block=timeout)
+            data: list = self.__save_data.get(timeout=timeout)
         except queue.Empty:
-            return
+            return []
         while not self.__save_data.empty():
             data.extend(self.__save_data.get())
         return data
 
-    def start_acquisition_data(self) -> Optional[True]:
+    def start_acquisition_data(self):
         """
         Send data acquisition command to device, block until data acquisition started or failed.
         """
         if self.__status == iFocus.Dev.TERMINATE:
             self.__raise_sock_error()
         if self.__status == iFocus.Dev.SIGNAL:
-            return True
+            return
         self.__status = iFocus.Dev.SIGNAL_START
         while self.__status not in [iFocus.Dev.SIGNAL, iFocus.Dev.TERMINATE]:
             time.sleep(0.01)
         if self.__status != iFocus.Dev.SIGNAL:
             self.__raise_sock_error()
 
-    def stop_acquisition(self) -> Optional[True]:
+    def stop_acquisition(self) -> None:
         """
         Stop data or impedance acquisition, block until data acquisition stopped or failed.
         """
@@ -133,6 +143,7 @@ class iFocus(Thread):
                 self.__status = iFocus.Dev.TERMINATE_START
 
         # clear buffer
+        self.dev.stop_recv()
         self.__parser.clear_buffer()
         self.__save_data.put(None)
         while self.__save_data.get() is not None:
@@ -148,11 +159,11 @@ class iFocus(Thread):
         print("Data thread closed")
 
     def run(self):
+        print("iFocus connected")
         while self.__status != iFocus.Dev.TERMINATE_START:
             if self.__status == iFocus.Dev.SIGNAL_START:
                 self.__recv_data()
             elif self.__status == iFocus.Dev.IDLE_START:
-                self.dev.stop_recv()
                 self.__status = iFocus.Dev.IDLE
                 while self.__status == iFocus.Dev.IDLE:
                     time.sleep(0.1)
@@ -180,7 +191,5 @@ class iFocus(Thread):
             raise Exception("Data transmission timeout.")
         elif self.__socket_flag == 4:
             raise Exception("Data/Impedance mode initialization failed.")
-        elif self.__socket_flag == 5:
-            raise Exception("Heartbeat package sent failed.")
         else:
             raise Exception(f"Unknown error: {self.__socket_flag}")

@@ -9,7 +9,7 @@ class Parser:
     _checksum = -4
     _trigger = -3
     _battery = -2
-    _packet = -1
+    _seq = -1
 
     def __init__(self, chs, fs, threshold=0.01):
         self.chs = chs
@@ -64,7 +64,7 @@ class Parser:
                 err = f"|Checksum invalid, packet dropped{datetime.now()}\n|Current:{frame.hex()}"
                 print(err)
                 continue
-            cur_num = frame[self._packet]
+            cur_num = frame[self._seq]
             if cur_num != ((self.__last_num + 1) % 256):
                 self.__drop_count += 1
                 err = f">>>> Pkt Los Cur:{cur_num} Last valid:{self.__last_num} buf len:{len(self.__buffer)} dropped times:{self.__drop_count} {datetime.now()}<<<<\n"

@@ -163,7 +163,7 @@ class iRecorder(Thread):
         if self.__status != iRecorder.Dev.SIGNAL:
             self.__raise_sock_error()
 
-    def get_data(self, timeout: Optional[float] = None) -> Optional[list]:
+    def get_data(self, timeout: Optional[float] = None) -> list[Optional[list]]:
         """
         Aquire amplifier data, each return list of frames, each frame contains all wanted channels and triggerbox data.
 
@@ -177,9 +177,9 @@ class iRecorder(Thread):
         if self.__socket_flag:
             self.__raise_sock_error()
         try:
-            data: list = self.__save_data.get(block=timeout)
+            data: list = self.__save_data.get(timeout=timeout)
         except queue.Empty:
-            return
+            return []
         while not self.__save_data.empty():
             data.extend(self.__save_data.get())
         return data

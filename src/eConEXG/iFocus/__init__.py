@@ -1,3 +1,3 @@
-from .data_reader import iFocus
-
 __all__ = ["iFocus"]
+
+from .data_reader import iFocus
