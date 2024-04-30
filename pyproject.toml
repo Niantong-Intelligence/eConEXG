@@ -3,7 +3,7 @@ name = "eConEXG"
 dynamic = ["version"]
 authors = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
 maintainers = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
-description = "Add your description here"
+description = "SDK for Niantong devices."
 dependencies = ["numpy", "pyserial>=3.5"]
 readme = "README.md"
 requires-python = ">= 3.9"

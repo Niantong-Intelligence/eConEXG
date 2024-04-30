@@ -15,6 +15,7 @@ class triggerBoxWireless:
                 break
         else:
             raise Exception("Trigger box not found")
+        time.sleep(0.1)
 
     def sendMarker(self, marker: int):
         if not isinstance(marker, int):
