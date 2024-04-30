@@ -1,6 +1,5 @@
 from typing import Optional
 import time
-import traceback
 
 
 class triggerBoxWireless:
@@ -15,14 +14,19 @@ class triggerBoxWireless:
                 break
         else:
             raise Exception("Trigger box not found")
+        self.__last_timestamp = time.perf_counter()
+        self.__warn = "Marker interval too short, amplifier may fail to receive it. Suggested interval is above 50ms"
         time.sleep(0.1)
 
     def sendMarker(self, marker: int):
+        if time.perf_counter() - self.__last_timestamp < 0.045:
+            print(self.__warn)
         if not isinstance(marker, int):
             marker = int(marker)
         if marker == 13 or marker <= 0 or marker > 255:
             raise Exception("Invalid marker")
         self.dev.write(marker.to_bytes() + b"\x55\x66\x0d")
+        self.__last_timestamp = time.perf_counter()
 
     def close_dev(self):
         self.dev.close()
@@ -114,10 +118,5 @@ class lightStimulator:
             raise Exception("Invalid frequency")
         return fs
 
-    def __del__(self):
-        if hasattr(self, "dev"):
-            try:
-                self.dev.close()
-            except Exception:
-                traceback.print_exc()
-                print("Failed to close light stimulator")
+    def close_dev(self):
+        self.dev.close()

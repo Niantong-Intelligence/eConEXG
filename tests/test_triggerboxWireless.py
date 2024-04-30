@@ -1,17 +1,32 @@
 from eConEXG import triggerBoxWireless
 import time
 
-if __name__ == "__main__":
-    # if port not given, it will connect to the first available device
-    dev = triggerBoxWireless()
-    """Alternatively, one can search devices using the find_devs() method and connect to the desired one."""
+# data unit in seconds
+INTERVAL = 0.05  # marker interval
+DURATION = 100  # None for infinite loop
 
+dev = triggerBoxWireless()
+
+_count = 0
+_elapsed = 0
+_start = time.perf_counter()
+try:
     while True:
-        try:
-            dev.sendMarker(1)
-            time.sleep(0.1)
-            print('triggered')
-        except KeyboardInterrupt:
+        if time.perf_counter() - _start < _elapsed:
+            continue
+        dev.sendMarker(1)
+        _elapsed += INTERVAL
+        _count += 1
+        if time.perf_counter() - _start > DURATION:
             break
-    dev.close_dev()
-    print(">>>test finished<<<")
+except KeyboardInterrupt:
+    pass
+except Exception as e:
+    print(e)
+finally:
+    try:
+        dev.close_dev()
+    except Exception:
+        pass
+
+print(f"\n>>>Total Markers: {_count}<<<")
