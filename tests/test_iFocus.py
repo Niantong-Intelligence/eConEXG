@@ -10,14 +10,15 @@ dev = iFocus()
 dev.start_acquisition_data()
 start = time.time()
 count = 0
-while True:
-    try:
+
+try:
+    while True:
         frames = dev.get_data(timeout=0.02)
         for frame in frames:
             # print(frame)
             count += 5
-    except KeyboardInterrupt:
-        break
+except KeyboardInterrupt:
+    pass
 
 print(f"average fs:{count/(time.time()-start)}")
 
