@@ -1,7 +1,7 @@
 from eConEXG import iRecorder
 import time
 
-dev = iRecorder(dev_type="W32", fs=2000)
+dev = iRecorder(dev_type="W16", fs=2000)
 print(dev.get_dev_info())
 
 # dev.connect_device("iRe-E5C1EF")

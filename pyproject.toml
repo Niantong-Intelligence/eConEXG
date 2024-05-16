@@ -8,9 +8,9 @@ dependencies = ["numpy", "pyserial>=3.5"]
 readme = "README.md"
 requires-python = ">= 3.9"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
 ]
 
 [tool.hatch.version]
@@ -21,15 +21,15 @@ Homepage = "https://github.com/Niantong-Intelligence/eConEXG"
 Issues = "https://github.com/Niantong-Intelligence/eConEXG/issues"
 
 [project.optional-dependencies]
-iRecorder = [
-    "pylsl>=1.16.2",
-    "pyEDFlib>=0.1.37",
-    "netifaces;platform_system=='Windows'",
-    "netifaces;platform_system=='Darwin'",
-    "netifaces2;platform_system=='Linux'",
-    "pywifi>=1.1.12;platform_system=='Windows'",
-    "comtypes;platform_system=='Windows'",
+wifi = [
+  "netifaces;platform_system=='Windows'",
+  "netifaces;platform_system=='Darwin'",
+  "netifaces2;platform_system=='Linux'",
+  "pywifi>=1.1.12;platform_system=='Windows'",
+  "comtypes;platform_system=='Windows'",
 ]
+bdf = ["pyEDFlib>=0.1.37"]
+lsl = ["pylsl>=1.16.2"]
 
 [build-system]
 requires = ["hatchling"]
@@ -40,11 +40,7 @@ managed = true
 dev-dependencies = ["pytest>=8.1.1"]
 
 [tool.hatch.build]
-artifacts = [
-  "*.so",
-  "*.dll",
-  "*.pyd",
-]
+artifacts = ["*.so", "*.dll", "*.pyd"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
