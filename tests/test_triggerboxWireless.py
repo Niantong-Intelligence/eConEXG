@@ -20,13 +20,8 @@ try:
         if time.perf_counter() - _start > DURATION:
             break
 except KeyboardInterrupt:
-    pass
+    dev.close_dev()
 except Exception as e:
     print(e)
 finally:
-    try:
-        dev.close_dev()
-    except Exception:
-        pass
-
-print(f"\n>>>Total Markers: {_count}<<<")
+    print(f"\n>>>Total Markers: {_count}<<<")

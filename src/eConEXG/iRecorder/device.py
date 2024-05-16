@@ -375,6 +375,8 @@ class iRecorder(Thread):
         while self.__status in [iRecorder.Dev.SIGNAL, iRecorder.Dev.IMPEDANCE]:
             try:
                 data = self.dev.recv_socket()
+                if not data:
+                    raise Exception("Remote transmission closed.")
                 ret = self.__parser.parse_data(data)
                 if ret:
                     self.__save_data.put(ret)
