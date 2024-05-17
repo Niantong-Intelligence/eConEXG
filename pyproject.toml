@@ -4,7 +4,15 @@ dynamic = ["version"]
 authors = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
 maintainers = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
 description = "SDK for Niantong devices."
-dependencies = ["numpy", "pyserial>=3.5"]
+dependencies = [
+  "numpy",
+  "pyserial>=3.5",
+  "netifaces;platform_system=='Windows'",
+  "netifaces;platform_system=='Darwin'",
+  "netifaces2;platform_system=='Linux'",
+  "pywifi>=1.1.12;platform_system=='Windows'",
+  "comtypes;platform_system=='Windows'",
+]
 readme = "README.md"
 requires-python = ">= 3.9"
 classifiers = [
@@ -21,13 +29,6 @@ Homepage = "https://github.com/Niantong-Intelligence/eConEXG"
 Issues = "https://github.com/Niantong-Intelligence/eConEXG/issues"
 
 [project.optional-dependencies]
-wifi = [
-  "netifaces;platform_system=='Windows'",
-  "netifaces;platform_system=='Darwin'",
-  "netifaces2;platform_system=='Linux'",
-  "pywifi>=1.1.12;platform_system=='Windows'",
-  "comtypes;platform_system=='Windows'",
-]
 bdf = ["pyEDFlib>=0.1.37"]
 lsl = ["pylsl>=1.16.2"]
 

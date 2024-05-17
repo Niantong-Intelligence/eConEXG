@@ -3,11 +3,20 @@ import time
 
 
 class triggerBoxWireless:
-    def __init__(self) -> None:
+    def __init__(self, port=None) -> None:
+        """
+        Parameters
+        ----------
+        port : str, optional
+            The serial port of the trigger box. If not given, the function will try to find the trigger box automatically.
+        """
         from serial import Serial
         from serial.tools.list_ports import comports
 
-        ports = comports()
+        if not port:
+            ports = comports()
+        else:
+            ports = [port]
         for port in ports:
             if port.pid == 0x6001 and port.vid == 0x0403:
                 self.dev = Serial(port.device, baudrate=115200, timeout=1)
@@ -33,11 +42,20 @@ class triggerBoxWireless:
 
 
 class triggerBoxWired:
-    def __init__(self) -> None:
+    def __init__(self, port=None) -> None:
+        """
+        Parameters
+        ----------
+        port : str, optional
+            The serial port of the trigger box. If not given, the function will try to find the trigger box automatically.
+        """
         from serial import Serial
         from serial.tools.list_ports import comports
 
-        ports = comports()
+        if not port:
+            ports = comports()
+        else:
+            ports = [port]
         for port in ports:
             if port.pid == 0x5740 and port.vid == 0x0483:
                 self.dev = Serial(port.device, timeout=1)

@@ -147,7 +147,7 @@ class iRecorder(Thread):
         ch_idx = [i for i in channels.keys()]
         self.__parser.update_chs(ch_idx)
 
-    def start_acquisition_data(self) -> Optional[True]:
+    def start_acquisition_data(self) -> Optional[bool]:
         """
         Send data acquisition command to device, block until data acquisition started or failed.
         """
@@ -165,7 +165,7 @@ class iRecorder(Thread):
 
     def get_data(self, timeout: Optional[float] = None) -> list[Optional[list]]:
         """
-        Aquire amplifier data, each return list of frames, each frame contains all wanted channels and triggerbox data.
+        Acquire amplifier data, each return list of frames, each frame contains all wanted channels and triggerbox data.
 
         Make sure this function is called in a loop so that it can continuously read the data.
 
@@ -184,7 +184,7 @@ class iRecorder(Thread):
             data.extend(self.__save_data.get())
         return data
 
-    def stop_acquisition(self) -> Optional[True]:
+    def stop_acquisition(self) -> Optional[bool]:
         """
         Stop data or impedance acquisition, block until data acquisition stopped or failed.
         """
@@ -196,7 +196,7 @@ class iRecorder(Thread):
         if self.__status != iRecorder.Dev.IDLE:
             self.__raise_sock_error()
 
-    def start_acquisition_impedance(self) -> Optional[True]:
+    def start_acquisition_impedance(self) -> Optional[bool]:
         """
         Send impedance acquisition command to device, block until data acquisition started or failed.
         """
@@ -214,7 +214,7 @@ class iRecorder(Thread):
 
     def get_impedance(self) -> Optional[list]:
         """
-        Aquire channel impedances, return immediatly, impedance update interval is about 2000ms
+        Acquire channel impedances, return immediatly, impedance update interval is about 2000ms
 
         Returns
         -------

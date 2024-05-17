@@ -1,9 +1,9 @@
 from . import bluetooth
 from queue import Queue
 from threading import Thread
-from typing import Union
+from typing import Union, Literal
 
-CHANNELS: Union[16, 8] = 16
+CHANNELS: Union[Literal[16], Literal[8]] = 16
 
 
 class bt(Thread):
