@@ -91,7 +91,7 @@ class com_socket:
     def __init__(self, sock_args) -> None:
         from serial import Serial
 
-        self.command_wait = 0.01
+        self.command_wait = 0.05
         self.__sock_args = sock_args
         self.__socket = Serial(timeout=5)
         self.__socket.port = self.__sock_args["sock"]

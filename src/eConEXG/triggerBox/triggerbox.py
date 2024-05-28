@@ -31,7 +31,7 @@ class triggerBoxWireless:
         """
         Send a marker to the trigger box.
 
-        Parameters 
+        Parameters
         ----------
             marker : int
                 range from `1` to `255`, `13` is not available and reserved for internal use.
