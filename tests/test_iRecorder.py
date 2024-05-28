@@ -1,7 +1,7 @@
 from eConEXG import iRecorder
 import time
 
-dev = iRecorder(dev_type="W16", fs=2000)
+dev = iRecorder(dev_type="W8")
 print(dev.get_dev_info())
 
 # dev.connect_device("iRe-E5C1EF")
@@ -16,21 +16,26 @@ dev.start_acquisition_data()
 start = time.time()
 first_data = None
 count = 0
-duration = 20
-while time.time() - start < duration:
-    frames = dev.get_data(timeout=0.02)
-    for frame in frames:
-        if not first_data:
-            first_data = time.time()
-            print(f"First packet delay: {first_data-start}")
-        count += 1
-print(f"average fs:{count/(time.time()-first_data)}")
+duration = 10
+try:
+    while time.time() - start < duration:
+        frames = dev.get_data(timeout=0.02)
+        for frame in frames:
+            if not first_data:
+                first_data = time.time()
+                print(f"First packet delay: {first_data-start}")
+            count += 1
+    print(f"average fs:{count/(time.time()-first_data)}")
 
-dev.start_acquisition_impedance()
-start = time.time()
-while time.time() - start < duration:
-    print(f"Impedance: {dev.get_impedance()}")
-    time.sleep(2)
+    # dev.stop_acquisition()
+
+    dev.start_acquisition_impedance()
+    start = time.time()
+    while time.time() - start < duration:
+        print(f"Impedance: {dev.get_impedance()}")
+        time.sleep(2)
+except KeyboardInterrupt:
+    pass
 
 dev.close_dev()
 print(">>>test finished<<<")

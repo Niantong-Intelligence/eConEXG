@@ -5,13 +5,13 @@ authors = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
 maintainers = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
 description = "SDK for Niantong devices."
 dependencies = [
-  "numpy",
-  "pyserial>=3.5",
-  "netifaces;platform_system=='Windows'",
-  "netifaces;platform_system=='Darwin'",
-  "netifaces2;platform_system=='Linux'",
-  "pywifi>=1.1.12;platform_system=='Windows'",
-  "comtypes;platform_system=='Windows'",
+    "numpy",
+    "pyserial>=3.5",
+    "netifaces;platform_system=='Windows'",
+    "netifaces;platform_system=='Darwin'",
+    "netifaces2;platform_system=='Linux'",
+    "pywifi>=1.1.12;platform_system=='Windows'",
+    "comtypes;platform_system=='Windows'",
 ]
 readme = "README.md"
 requires-python = ">= 3.9"
@@ -38,7 +38,15 @@ build-backend = "hatchling.build"
 
 [tool.rye]
 managed = true
-dev-dependencies = ["pytest>=8.1.1"]
+dev-dependencies = [
+    "pytest>=8.1.1",
+    "mkdocs>=1.6.0",
+    "mkdocstrings[python]>=0.25.1",
+    "mkdocs-material>=9.5.25",
+]
+
+# [tool.uv.pip]
+# uv pip install --reinstall numpy
 
 [tool.hatch.build]
 artifacts = ["*.so", "*.dll", "*.pyd"]

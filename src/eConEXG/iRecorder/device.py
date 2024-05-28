@@ -4,7 +4,7 @@ import traceback
 from enum import Enum
 from queue import Queue
 from threading import Thread
-from typing import Literal, Optional, Union
+from typing import Literal, Optional
 
 from .data_parser import Parser
 from .physical_interface import get_interface, get_sock
@@ -12,51 +12,44 @@ from .physical_interface import get_interface, get_sock
 
 class iRecorder(Thread):
     class Dev(Enum):
-        SIGNAL = 10
+        SIGNAL = 10  # signal transmision mode
         SIGNAL_START = 11
-        IMPEDANCE = 20
+        IMPEDANCE = 20  # impedance transmision mode
         IMPEDANCE_START = 21
-        IDLE = 30
+        IDLE = 30  # idle mode
         IDLE_START = 31
         TERMINATE = 40
         TERMINATE_START = 41
 
-    def __init__(
-        self,
-        dev_type: Literal["W8", "W16", "W32", "USB32"],
-        fs: Union[Literal[500], Literal[1000], Literal[2000]] = 500,
-    ):
+    def __init__(self, dev_type: Literal["W8", "W16", "W32", "USB32"]):
         """
-        Parameters
-        ----------
-        dev_type: str
-            "W8", "W16", "W32", "USB32"
-        fs: int
-            sample frequency, only available to USB32
+        Args:
+            dev_type: "W8", "W16", "W32", "USB32"
         """
-        super().__init__(daemon=True, name="Data collect")
+        super().__init__(daemon=True, name="iRecorder")
         self.__info_q = Queue(128)
         self.__socket_flag = 1
         self.__save_data = Queue()
         self.__status = iRecorder.Dev.TERMINATE
         self.__lsl_flag = False
         self.__bdf_flag = False
+        self.__dev_args = {"type": dev_type}
+        self.__dev_args.update({"channel": self.__get_chs()})
 
+        self.__parser = Parser(self.__dev_args["channel"])
         self.__interface = get_interface(dev_type)(self.__info_q)
         self.__dev_sock = get_sock(dev_type)
-        self.__dev_args = self.__validate_dev(dev_type, fs)
-        self.__dev_args.update({"Interface": self.__interface.interface})
-        self.__parser = Parser(self.__dev_args["channel"], self.__dev_args["fs"])
+        self.__dev_args.update({"AdapterInfo": self.__interface.interface})
+
+        self.set_frequency()
         self.update_channels()
 
     def find_devs(self, duration: Optional[int] = None) -> Optional[list]:
         """
         Search for available devices.
-        Parameters
-        ----------
-        duration: int
-            search interval, if not None, block for about duration seconds and return found devices,
-            if set to None, return immediately, devices can be later acquired by calling `get_devs()`.
+
+        Args:
+            duration: search interval in seconds, blocks for about `duration` seconds and return found devices, if set to `None`, return immediately, devices can be later acquired by calling `get_devs()`.
         """
         if self.is_alive():
             raise Exception("iRecorder already connected.")
@@ -71,14 +64,13 @@ class iRecorder(Thread):
         self.__finish_search()
         return self.get_devs()
 
-    def get_devs(self, verbose=False) -> list:
+    def get_devs(self, verbose: bool = False) -> list:
         """
-        Get available devices, can be called after `find_devs(duration = None)`, each call will only return newly found devices.
+        Get available devices. This can be called after `find_devs(duration = None)`, and each call will only return newly found devices.
 
-        Parameters
-        ----------
-        verbose: bool
-            if True, return all available devices information, otherwise only return names for connection.
+        Args:
+            verbose: if True, return all available devices information, otherwise only return names for connection,
+                if you don't know what this parameter does, just leave it at its default value.
         """
         ret = []
         while not self.__info_q.empty():
@@ -106,6 +98,30 @@ class iRecorder(Thread):
 
         return deepcopy(self.__dev_args)
 
+    def get_available_frequency(self) -> list:
+        """Get available sample frequency of device."""
+        if self.__dev_args["type"] == "USB32":
+            return [500, 1000, 2000]
+        else:
+            return [500]
+
+    def set_frequency(self, fs: int = None):
+        """Update sample frequency, can be invoked before `connect_device`.
+
+        Args:
+            fs: sample frequency in Hz, if `None`, use the lowest available frequency.
+        """
+        if self.is_alive():
+            raise Exception("Already connected to device")
+        default = self.get_available_frequency()[0]
+        if fs is None:
+            fs = default
+        if fs not in self.get_available_frequency():
+            print(f"Invalid sample frequency, fallback to {default}Hz")
+            fs = default
+        self.__dev_args.update({"fs": fs})
+        self.__parser._update_fs(fs)
+
     def connect_device(self, addr: str) -> None:
         """
         Connect to device by address, block until connection is established or failed.
@@ -131,14 +147,18 @@ class iRecorder(Thread):
         """
         update channel information, valid only when device stopped acquisition.
         channel number is 0 based.
-        Parameters
-        ----------
-        channels: dict or None
-            channel number and name mapping, e.g. {0: "FPz", 1: "Oz", 2: "CPz"},
-            if None is given, all channels availabel will be used with default name Ch0, Ch1,..
+
+        Args:
+            channels: channel number and name mapping, e.g. {0: "FPz", 1: "Oz", 2: "CPz"},
+                if `None` is given, all channels availabel will be used with default values.
+
+        Raises:
+            Exception: if data/impedance acquisition in progress.
         """
         if self.__status not in [iRecorder.Dev.IDLE, iRecorder.Dev.TERMINATE]:
-            raise Exception("Device acquisition in progress, please stop first.")
+            raise Exception(
+                "Device acquisition in progress, please `stop_acquisition` first."
+            )
         if channels is None:
             from .default_config import getChannels
 
@@ -147,14 +167,17 @@ class iRecorder(Thread):
         ch_idx = [i for i in channels.keys()]
         self.__parser.update_chs(ch_idx)
 
-    def start_acquisition_data(self) -> Optional[bool]:
+    def start_acquisition_data(self) -> None:
         """
         Send data acquisition command to device, block until data acquisition started or failed.
+
+        Raises:
+            Exception: if device not connected or data acquisition init failed.
         """
         if self.__status == iRecorder.Dev.TERMINATE:
             self.__raise_sock_error()
         if self.__status == iRecorder.Dev.SIGNAL:
-            return True
+            return None
         if self.__status == iRecorder.Dev.IMPEDANCE:
             self.stop_acquisition()
         self.__status = iRecorder.Dev.SIGNAL_START
@@ -162,17 +185,17 @@ class iRecorder(Thread):
             time.sleep(0.01)
         if self.__status != iRecorder.Dev.SIGNAL:
             self.__raise_sock_error()
+        return None
 
     def get_data(self, timeout: Optional[float] = None) -> list[Optional[list]]:
         """
-        Acquire amplifier data, each return list of frames, each frame contains all wanted channels and triggerbox data.
+        Acquire amplifier data, make sure this function is called in a loop so that it can continuously read the data.
 
-        Make sure this function is called in a loop so that it can continuously read the data.
+        Args:
+            timeout: a non-negative number, it blocks at most `timeout` seconds and return.
 
-        Parameters
-        ----------
-        timeout:
-            a non-negative number, it blocks at most 'timeout' seconds and return.
+        Returns:
+            A list of frames, each frame contains all wanted channels and triggerbox data.
         """
         if self.__socket_flag:
             self.__raise_sock_error()
@@ -184,9 +207,12 @@ class iRecorder(Thread):
             data.extend(self.__save_data.get())
         return data
 
-    def stop_acquisition(self) -> Optional[bool]:
+    def stop_acquisition(self) -> None:
         """
         Stop data or impedance acquisition, block until data acquisition stopped or failed.
+
+        Raises:
+            Exception: if device not connected or acquisition stop failed.
         """
         if self.__status == iRecorder.Dev.TERMINATE:
             self.__raise_sock_error()
@@ -195,15 +221,19 @@ class iRecorder(Thread):
             time.sleep(0.01)
         if self.__status != iRecorder.Dev.IDLE:
             self.__raise_sock_error()
+        return None
 
-    def start_acquisition_impedance(self) -> Optional[bool]:
+    def start_acquisition_impedance(self) -> None:
         """
         Send impedance acquisition command to device, block until data acquisition started or failed.
+
+        Raises:
+            Exception: if device not connected or impedance acquisition init failed.
         """
         if self.__status == iRecorder.Dev.TERMINATE:
             self.__raise_sock_error()
         if self.__status == iRecorder.Dev.IMPEDANCE:
-            return True
+            return None
         if self.__status == iRecorder.Dev.SIGNAL:
             self.stop_acquisition()
         self.__status = iRecorder.Dev.IMPEDANCE_START
@@ -211,14 +241,14 @@ class iRecorder(Thread):
             time.sleep(0.01)
         if self.__status != iRecorder.Dev.IMPEDANCE:
             self.__raise_sock_error()
+        return None
 
     def get_impedance(self) -> Optional[list]:
         """
-        Acquire channel impedances, return immediatly, impedance update interval is about 2000ms
+        Acquire channel impedances, return immediatly, impedance update interval is about 2000ms.
 
-        Returns
-        -------
-        List of channel impedance, range from `0` to `np.inf`.
+        Returns:
+            A list of channel impedance ranging from `0` to `np.inf` if available, otherwise `None`.
         """
         if self.__socket_flag:
             if self.is_alive():
@@ -226,7 +256,7 @@ class iRecorder(Thread):
             self.__raise_sock_error()
         return self.__parser.impedance
 
-    def close_dev(self):
+    def close_dev(self) -> None:
         """
         Close device connection and release resources.
         """
@@ -239,13 +269,21 @@ class iRecorder(Thread):
         if self.is_alive():
             self.join()
 
+    def get_packet_drop_count(self) -> int:
+        """
+        Get packet drop count, the value accumulates during data acquisition and resets to `0` after calling `stop_acquisition()`.
+
+        Returns:
+            packet drop count.
+        """
+        return self.__parser._drop_count
+
     def get_battery_value(self) -> int:
         """
         Query battery level.
 
-        Returns
-        -------
-        battery level in percentage, range from `0` to `100`.
+        Returns:
+            battery level in percentage, range from `0` to `100`.
         """
         return self.__parser.batt_val
 
@@ -280,10 +318,8 @@ class iRecorder(Thread):
         """
         Save data to BDF file, can be invoked after `start_acquisition_data()`
 
-        Parameters
-        ----------
-        filename: str
-            file name to save data, accept absolute or relative path.
+        Args:
+            filename: file name to save data, accept absolute or relative path.
         """
         if self.__status != iRecorder.Dev.SIGNAL:
             raise Exception("Data acquisition not started")
@@ -314,7 +350,8 @@ class iRecorder(Thread):
         """
         Send marker to BDF file, can be invoked after `open_bdf_file()`
         """
-        self._bdf_file.write_Annotation(marker)
+        if hasattr(self, "_bdf_file"):
+            self._bdf_file.write_Annotation(marker)
 
     def __raise_sock_error(self):
         if self.__socket_flag == 0:
@@ -335,9 +372,6 @@ class iRecorder(Thread):
             raise Exception(f"Unknown error: {self.__socket_flag}")
 
     def run(self):
-        """
-        Main loop thread for device status control, invoked automatically after `connect_device()` succeeded.
-        """
         while self.__status not in [iRecorder.Dev.TERMINATE_START]:
             if self.__status == iRecorder.Dev.SIGNAL_START:
                 self.__recv_data(imp_mode=False)
@@ -432,25 +466,18 @@ class iRecorder(Thread):
                 self.__socket_flag = 5
                 self.__status = iRecorder.Dev.TERMINATE_START
 
-    def __validate_dev(self, dev_type, fs) -> dict:
-        dev_args = {"fs": fs, "type": dev_type}
-        if dev_type != "USB32" and fs != 500:
-            print("optional fs only available to USB32 devices, set to 500")
-            fs = 500
-        if fs not in [500, 1000, 2000]:
-            raise ValueError("fs should be in 500, 1000 or 2000")
-        dev_args.update({"fs": fs})
+    def __get_chs(self) -> int:
+        dev_type = self.__dev_args["type"]
         if dev_type == "W8":
-            dev_args.update({"channel": 8})
+            return 8
         elif dev_type == "W16":
-            dev_args.update({"channel": 16})
+            return 16
         elif dev_type == "W32":
-            dev_args.update({"channel": 32})
+            return 32
         elif dev_type == "USB32":
-            dev_args.update({"channel": 32})
+            return 32
         else:
             raise ValueError("Invalid device type")
-        return dev_args
 
     def __finish_search(self):
         if self.__interface.is_alive():

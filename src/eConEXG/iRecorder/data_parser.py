@@ -10,23 +10,27 @@ class Parser:
     _trigger = -3
     _battery = -2
     _seq = -1
+    _threshold = 0.01
 
-    def __init__(self, chs, fs, threshold=0.01):
+    def __init__(self, chs):
         self.chs = chs
         self.batt_val = 0
         self.imp_flag = False
         self._ratio = 0.02235174
+        length = self.chs * self._byts + abs(self._checksum)
+        self.__pattern = re.compile(b"\xbb\xaa.{%d}" % length, flags=re.DOTALL)
+
+    def _update_fs(self, fs):
         self._imp_len = int(512 * 2 * fs / 500)
         self._imp_factor = 1000 / 6 / (self._imp_len / 2) * np.pi / 4
         length = self.chs * self._byts + abs(self._checksum)
-        self.__pattern = re.compile(b"\xbb\xaa.{%d}" % length, flags=re.DOTALL)
-        self._threshold = int((self._start + length) * fs * threshold)
+        self._threshold = int((self._start + length) * fs * self._threshold)
         self.clear_buffer()
 
     def clear_buffer(self):
         self.__buffer = bytearray()
         self.__last_num = 255
-        self.__drop_count = 0
+        self._drop_count = 0
         self.__impe_queue = np.zeros((self._imp_len, self.chs))
         self.__imp_idx = 0
         self.impedance = None
@@ -66,8 +70,8 @@ class Parser:
                 continue
             cur_num = frame[self._seq]
             if cur_num != ((self.__last_num + 1) % 256):
-                self.__drop_count += 1
-                err = f">>>> Pkt Los Cur:{cur_num} Last valid:{self.__last_num} buf len:{len(self.__buffer)} dropped times:{self.__drop_count} {datetime.now()}<<<<\n"
+                self._drop_count += 1
+                err = f">>>> Pkt Los Cur:{cur_num} Last valid:{self.__last_num} buf len:{len(self.__buffer)} dropped times:{self._drop_count} {datetime.now()}<<<<\n"
                 print(err)
             self.__last_num = cur_num
             data = [

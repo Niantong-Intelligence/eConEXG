@@ -7,8 +7,8 @@ class triggerBoxWireless:
         """
         Parameters
         ----------
-        port : str, optional
-            The serial port of the trigger box. If not given, the function will try to find the trigger box automatically.
+            port : str, optional
+                The serial port of the trigger box. If not given, the function will try to find the trigger box automatically.
         """
         from serial import Serial
         from serial.tools.list_ports import comports
@@ -28,6 +28,14 @@ class triggerBoxWireless:
         time.sleep(0.1)
 
     def sendMarker(self, marker: int):
+        """
+        Send a marker to the trigger box.
+
+        Parameters 
+        ----------
+            marker : int
+                range from `1` to `255`, `13` is not available and reserved for internal use.
+        """
         if time.perf_counter() - self.__last_timestamp < 0.045:
             print(self.__warn)
         if not isinstance(marker, int):

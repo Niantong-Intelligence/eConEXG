@@ -18,12 +18,10 @@ class iFocus(Thread):
         TERMINATE = 40
         TERMINATE_START = 41
 
-    def __init__(self, port: Optional[str] = None):
+    def __init__(self, port: Optional[str] = None) -> None:
         """
-        Parameters
-        ----------
-        port: str | None
-            if not given, connect to the first available device
+        Args:
+            port: if not given, connect to the first available device
         """
         super().__init__(daemon=True)
         if port is None:
@@ -44,7 +42,16 @@ class iFocus(Thread):
         self.start()
 
     @staticmethod
-    def find_devs():
+    def find_devs() -> list:
+        """
+        Find available iFocus devices.
+
+        Returns:
+            available device ports.
+
+        Raises:
+            Exception: if no iFocus device found.
+        """
         from serial.tools.list_ports import comports
 
         ret = []
@@ -59,24 +66,22 @@ class iFocus(Thread):
 
     def get_data(self, timeout: Optional[float] = None) -> list[Optional[list]]:
         """
-        Aquire iFocus data, each return list of frames, each frame is made up of 5 eeg data and
-        1 imu data in a shape as below:
+        Acquire iFocus data, make sure this function is called in a loop so that it can continuously read the data.
 
-        [[`eeg_0`], [`eeg_1`], [`eeg_2`], [`eeg_3`], [`eeg_4`], [`imu_x`, `imu_y`, `imu_z`]]
+        Args:
+            timeout: it blocks at most 'timeout' seconds and return, if set to `None`, blocks until new data available.
 
-        in which number `0~4` after `_` indicates the time order of channel data.
+        Returns:
+            A list of frames, each frame is made up of 5 eeg data and 1 imu data in a shape as below:
+                [[`eeg_0`], [`eeg_1`], [`eeg_2`], [`eeg_3`], [`eeg_4`], [`imu_x`, `imu_y`, `imu_z`]],
+                    in which number `0~4` after `_` indicates the time order of channel data.
 
-        Make sure this function is called in a loop so that it can continuously read the data.
+        Raises:
+            Exception: if device not connected, connection failed, data transmission timeout/init failed, or unknown error.
 
-        Data Unit
-        ----------
-        eeg: µV
-        imu: degree(°)
-
-        Parameters
-        ----------
-        timeout:
-            a non-negative number, it blocks at most 'timeout' seconds and return.
+        Data Unit:
+            - eeg: µV
+            - imu: degree(°)
         """
         if self.__socket_flag:
             self.__raise_sock_error()
@@ -88,7 +93,7 @@ class iFocus(Thread):
             data.extend(self.__save_data.get())
         return data
 
-    def start_acquisition_data(self):
+    def start_acquisition_data(self) -> None:
         """
         Send data acquisition command to device, block until data acquisition started or failed.
         """
