@@ -1,4 +1,5 @@
 rye fmt
+mkdocs build
 rye sync
 rye build --clean
 rye publish -r testpypi --repository-url https://test.pypi.org/legacy/
