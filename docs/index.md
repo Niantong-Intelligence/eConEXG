@@ -1,17 +1,25 @@
-# Welcome to MkDocs
+# Welcome to eConEXG's documentation.
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+for full infomation, please visit our [Github](https://github.com/Niantong-Intelligence/eConEXG) repository.
 
-## Commands
+## Installation
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+*  **Online: (will be available soon)**
 
-## Project layout
+    `pip install econexg`
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+*  **Offline:**
+
+    `pip install econexg-x.x.x-py3-none-any.whl`
+
+#### Optional dependencies `bdf` and `lsl` can be installed using:
+
+`pip install econexg[option1,option2]`
+
+
+## More
+
+* [Discussion Forum](https://github.com/Niantong-Intelligence/eConEXG/discussions), to discuss the project
+  on GitHub
+* [Issue Tracker](https://github.com/Niantong-Intelligence/eConEXG/issues), if you run into bugs or have suggestions
+* License: MIT

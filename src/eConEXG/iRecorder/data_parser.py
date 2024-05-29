@@ -65,6 +65,7 @@ class Parser:
             frame = memoryview(frame_obj.group())
             raw = frame[self._start : self._checksum]
             if frame[self._checksum] != (~sum(raw)) & 0xFF:
+                self._drop_count += 1
                 err = f"|Checksum invalid, packet dropped{datetime.now()}\n|Current:{frame.hex()}"
                 print(err)
                 continue
@@ -82,7 +83,7 @@ class Parser:
                 )
                 * self._ratio
                 for i in self.ch_idx
-            ]  # default byteorder="big"
+            ]
             data.append(frame[self._trigger])
             frames.append(data)
         if frames:

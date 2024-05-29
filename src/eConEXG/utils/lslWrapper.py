@@ -35,7 +35,6 @@ class lslSender(StreamOutlet):
             ch.append_child_value("unit", "int")
             ch.append_child_value("type", "Trigger Box")
             ch.append_child_value("scaling_factor", "1")
-        # self.__outlet = StreamOutlet(info, max_buffered=60)
         super().__init__(info, max_buffered=60)
 
     def push_chuck(self, frames):

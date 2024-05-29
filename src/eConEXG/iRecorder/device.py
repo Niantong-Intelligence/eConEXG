@@ -18,13 +18,17 @@ class iRecorder(Thread):
         IMPEDANCE_START = 21
         IDLE = 30  # idle mode
         IDLE_START = 31
-        TERMINATE = 40
+        TERMINATE = 40  # Init state
         TERMINATE_START = 41
 
     def __init__(self, dev_type: Literal["W8", "W16", "W32", "USB32"]):
         """
         Args:
-            dev_type: "W8", "W16", "W32", "USB32"
+            dev_type: iRecorder device type.
+
+        Raises:
+            Exception: if device type not supported.
+            Exception: if adapter not available.
         """
         super().__init__(daemon=True, name="iRecorder")
         self.__info_q = Queue(128)
@@ -46,10 +50,17 @@ class iRecorder(Thread):
 
     def find_devs(self, duration: Optional[int] = None) -> Optional[list]:
         """
-        Search for available devices.
+        Search for available devices, can only be called once per instance.
 
         Args:
-            duration: search interval in seconds, blocks for about `duration` seconds and return found devices, if set to `None`, return immediately, devices can be later acquired by calling `get_devs()`.
+            duration: Search interval in seconds, blocks for about `duration` seconds and return found devices.
+
+        Returns:
+            Available devices. If `duration` is set to `None` it will return `None` immediately, 
+                devices can later be acquired by calling `get_devs()` in a loop.
+
+        Raises:
+            Exception: If search thread already running or iRecorder already connected.
         """
         if self.is_alive():
             raise Exception("iRecorder already connected.")
@@ -66,11 +77,18 @@ class iRecorder(Thread):
 
     def get_devs(self, verbose: bool = False) -> list:
         """
-        Get available devices. This can be called after `find_devs(duration = None)`, and each call will only return newly found devices.
+        Get available devices. This can be called after `find_devs(duration = None)` in a loop,
+            each call will *only* return newly found devices.
 
         Args:
             verbose: if True, return all available devices information, otherwise only return names for connection,
                 if you don't know what this parameter does, just leave it at its default value.
+
+        Returns:
+            Newly found devices.
+
+        Raises:
+            Exception: adapter not found or not enabled etc.
         """
         ret = []
         while not self.__info_q.empty():
@@ -87,29 +105,51 @@ class iRecorder(Thread):
     def get_dev_status(self) -> str:
         """
         Get current device status.
+
+        Returns:
+            SIGNAL: data acquisition mode
+            IMPEDANCE: impedance acquisition mode
+            IDLE: idle mode
+            TERMINATE: device not connected or connection closed.
         """
         return self.__status.name
 
     def get_dev_info(self) -> dict:
         """
         Get current device information, including device name, hardware channel number, acquired channels, sample frequency, etc.
+
+        Returns:
+            A dictionary containing device information, which includes:
+                `type`: hardware type;
+                `channel`: hardware channel number;
+                `AdapterInfo`: adapter used for connection;
+                `fs`: sample frequency in Hz;
+                `ch_info`: channel dictionary, including channel index and name, can be altered by `update_channels()`.
         """
         from copy import deepcopy
 
         return deepcopy(self.__dev_args)
 
     def get_available_frequency(self) -> list:
-        """Get available sample frequency of device."""
+        """Get available sample frequency of device.
+
+        Returns:
+            Available sample frequencies in Hz.
+        """
         if self.__dev_args["type"] == "USB32":
             return [500, 1000, 2000]
         else:
             return [500]
 
     def set_frequency(self, fs: int = None):
-        """Update sample frequency, can be invoked before `connect_device`.
+        """Update device sample frequency, can only be invoked before `connect_device`.
 
         Args:
-            fs: sample frequency in Hz, if `None`, use the lowest available frequency.
+            fs: sample frequency in Hz, if `None` or fs not in `get_available_frequency()`, 
+                it will fallback to the lowest available frequency.
+
+        Raises:
+            Exception: if device already connected.
         """
         if self.is_alive():
             raise Exception("Already connected to device")
@@ -125,6 +165,12 @@ class iRecorder(Thread):
     def connect_device(self, addr: str) -> None:
         """
         Connect to device by address, block until connection is established or failed.
+
+        Args:
+            addr: device address.
+
+        Raises:
+            Exception: if device already connected or connection failed.
         """
         if self.is_alive():
             raise Exception("iRecorder already connected")
@@ -167,7 +213,7 @@ class iRecorder(Thread):
         ch_idx = [i for i in channels.keys()]
         self.__parser.update_chs(ch_idx)
 
-    def start_acquisition_data(self) -> None:
+    def start_acquisition_data(self):
         """
         Send data acquisition command to device, block until data acquisition started or failed.
 
@@ -192,10 +238,16 @@ class iRecorder(Thread):
         Acquire amplifier data, make sure this function is called in a loop so that it can continuously read the data.
 
         Args:
-            timeout: a non-negative number, it blocks at most `timeout` seconds and return.
+            timeout: it blocks at most `timeout` seconds and return, otherwise it returns until new data is available.
 
         Returns:
-            A list of frames, each frame contains all wanted channels and triggerbox data.
+            A list of frames, each frame is a list contains all wanted eeg channels and triggerbox channel, 
+                eeg channels can be updatd by `update_channels()`.
+
+        Data Unit:
+            - eeg: microvolts (µV)
+            - triggerbox: int, from `0` to `255`
+
         """
         if self.__socket_flag:
             self.__raise_sock_error()
@@ -249,6 +301,9 @@ class iRecorder(Thread):
 
         Returns:
             A list of channel impedance ranging from `0` to `np.inf` if available, otherwise `None`.
+
+        Data Unit:
+            - impedance: ohm (Ω)
         """
         if self.__socket_flag:
             if self.is_alive():
@@ -269,12 +324,13 @@ class iRecorder(Thread):
         if self.is_alive():
             self.join()
 
-    def get_packet_drop_count(self) -> int:
+    def get_packet_drop_times(self) -> int:
         """
-        Get packet drop count, the value accumulates during data acquisition and resets to `0` after calling `stop_acquisition()`.
+        Retrieve packet drop times.
+        This value accumulates during data transmission and will be reset to `0` after device status change.
 
         Returns:
-            packet drop count.
+            accumulated packet drop times.
         """
         return self.__parser._drop_count
 
@@ -289,7 +345,13 @@ class iRecorder(Thread):
 
     def open_lsl_stream(self):
         """
-        Open LSL stream, can be invoked after `start_acquisition_data()`
+        Open LSL stream, can be invoked after `start_acquisition_data()`,
+            each frame is the same as described in `get_data()`. 
+
+        Raises:
+            Exception: if data acquisition not started or LSL stream already opened.
+            LSLException: if LSL stream creation failed.
+            importError: if `pylsl` is not installed or liblsl not installed for unix like system.
         """
         if self.__status != iRecorder.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
@@ -316,10 +378,15 @@ class iRecorder(Thread):
 
     def save_bdf_file(self, filename: str):
         """
-        Save data to BDF file, can be invoked after `start_acquisition_data()`
+        Save data to BDF file, can be invoked after `start_acquisition_data()`.
 
         Args:
             filename: file name to save data, accept absolute or relative path.
+
+        Raises:
+            Exception: if data acquisition not started or `save_bdf_file` is invoked and BDF file already created.
+            OSError: if BDF file creation failed, this may be caused by invalid file path or permission issue.
+            importError: if `pyedflib` is not installed.
         """
         if self.__status != iRecorder.Dev.SIGNAL:
             raise Exception("Data acquisition not started")
@@ -348,7 +415,10 @@ class iRecorder(Thread):
 
     def send_bdf_marker(self, marker: str):
         """
-        Send marker to BDF file, can be invoked after `open_bdf_file()`
+        Send marker to BDF file, can be invoked after `open_bdf_file()`, otherwise it will be ignored.
+
+        Args:
+            marker: marker string to write.
         """
         if hasattr(self, "_bdf_file"):
             self._bdf_file.write_Annotation(marker)
