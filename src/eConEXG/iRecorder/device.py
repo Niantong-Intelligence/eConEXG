@@ -56,7 +56,7 @@ class iRecorder(Thread):
             duration: Search interval in seconds, blocks for about `duration` seconds and return found devices.
 
         Returns:
-            Available devices. If `duration` is set to `None` it will return `None` immediately, 
+            Available devices. If `duration` is set to `None` it will return `None` immediately,
                 devices can later be acquired by calling `get_devs()` in a loop.
 
         Raises:
@@ -91,6 +91,7 @@ class iRecorder(Thread):
             Exception: adapter not found or not enabled etc.
         """
         ret = []
+        time.sleep(0.1)
         while not self.__info_q.empty():
             info = self.__info_q.get()
             if isinstance(info, list):
@@ -145,7 +146,7 @@ class iRecorder(Thread):
         """Update device sample frequency, can only be invoked before `connect_device`.
 
         Args:
-            fs: sample frequency in Hz, if `None` or fs not in `get_available_frequency()`, 
+            fs: sample frequency in Hz, if `None` or fs not in `get_available_frequency()`,
                 it will fallback to the lowest available frequency.
 
         Raises:
@@ -241,16 +242,21 @@ class iRecorder(Thread):
             timeout: it blocks at most `timeout` seconds and return, otherwise it returns until new data is available.
 
         Returns:
-            A list of frames, each frame is a list contains all wanted eeg channels and triggerbox channel, 
+            A list of frames, each frame is a list contains all wanted eeg channels and triggerbox channel,
                 eeg channels can be updatd by `update_channels()`.
 
         Data Unit:
             - eeg: microvolts (µV)
             - triggerbox: int, from `0` to `255`
 
+        Raises:
+            Exception: if device not connected or in data acquisition mode.
+
         """
         if self.__socket_flag:
             self.__raise_sock_error()
+        if self.__status != iRecorder.Dev.SIGNAL:
+            raise Exception("Data acquisition not started, please start first.")
         try:
             data: list = self.__save_data.get(timeout=timeout)
         except queue.Empty:
@@ -346,7 +352,7 @@ class iRecorder(Thread):
     def open_lsl_stream(self):
         """
         Open LSL stream, can be invoked after `start_acquisition_data()`,
-            each frame is the same as described in `get_data()`. 
+            each frame is the same as described in `get_data()`.
 
         Raises:
             Exception: if data acquisition not started or LSL stream already opened.

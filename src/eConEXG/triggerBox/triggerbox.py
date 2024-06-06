@@ -3,12 +3,11 @@ import time
 
 
 class triggerBoxWireless:
-    def __init__(self, port=None) -> None:
+    def __init__(self, port=None):
         """
-        Parameters
-        ----------
-            port : str, optional
-                The serial port of the trigger box. If not given, the function will try to find the trigger box automatically.
+        Args:
+            port: The serial port of the trigger box. If not given,
+                the function will try to find the trigger box automatically.
         """
         from serial import Serial
         from serial.tools.list_ports import comports
@@ -50,12 +49,14 @@ class triggerBoxWireless:
 
 
 class triggerBoxWired:
-    def __init__(self, port=None) -> None:
+    def __init__(self, port: str = None):
         """
-        Parameters
-        ----------
-        port : str, optional
-            The serial port of the trigger box. If not given, the function will try to find the trigger box automatically.
+        Args:
+            port: The serial port of the trigger box. If not given,
+                the function will try to find the trigger box automatically.
+
+        Raises:
+            Exception: If the trigger box is not found.
         """
         from serial import Serial
         from serial.tools.list_ports import comports
@@ -83,13 +84,16 @@ class triggerBoxWired:
 
 
 class lightStimulator:
-    def __init__(self) -> None:
+    def __init__(self, port: str = None):
         from serial import Serial
         from serial.tools.list_ports import comports
 
         self.wait_time = 0.1
         self.channels = 6
-        ports = comports()
+        if not port:
+            ports = comports()
+        else:
+            ports = [port]
         for port in ports:
             if (
                 port.pid == 0x6001
@@ -104,11 +108,14 @@ class lightStimulator:
 
     def vep_mode(self, fs: list[Optional[float]] = [1, 1, 1, 1, 1, 1]):
         """
-        Parameters
-        ----------
-        fs : list, default [1,1,1,1,1,1]
-            List of frequencies in Hz, range from 0 to 100 with 0.1Hz resolution.
-            If a corresponding frequency is None, 0  or not given, it will be set to off.
+        Enter VEP mode, which allows you to control the frequency of each channel separately.
+
+        Args:
+            fs: List of frequencies in Hz, range from 0 to 100 with 0.1Hz resolution.
+                If a corresponding frequency is None, 0  or not given, it will be set to off.
+
+        Raises:
+            Exception: If the frequency is invalid or hardware error.
         """
         fss = fs.copy()
         if len(fss) < self.channels:
@@ -125,6 +132,15 @@ class lightStimulator:
             raise Exception("Failed to set VEP mode")
 
     def erp_mode(self, fs: float):
+        """
+        Enter ERP mode, which allows you to control the frequency of all channels at once.
+
+        Args:
+            fs: Frequency in Hz, range from 0 to 100 with 0.1Hz resolution.
+
+        Raises:
+            Exception: If the frequency is invalid or hardware error.
+        """
         fs = self._validate_fs(fs)
         command = f"AT+ERP={fs:.1f}\r\n".encode()
         self.dev.write(command)

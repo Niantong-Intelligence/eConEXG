@@ -44,7 +44,8 @@ dev-dependencies = [
     "mkdocstrings[python]>=0.25.1",
     "mkdocs-material>=9.5.25",
 ]
-
+# [tool.ruff.lint]
+# select = ["NPY201"]
 # [tool.uv.pip]
 # uv pip install --reinstall numpy
 

@@ -1,14 +1,13 @@
 from eConEXG import iRecorder
 import time
 
-dev = iRecorder(dev_type="USB32")
+dev = iRecorder(dev_type="W16")
 print(dev.get_dev_info())
 
 
 """query and set frequency, optional, if not set, the lowest available frequency will be used."""
 # print(dev.get_available_frequency())
 # dev.set_frequency(1000)
-
 
 
 """query available devices continously"""
@@ -18,10 +17,14 @@ print(dev.get_dev_info())
 # while True:
 #     available_devs.extend(dev.get_devs())
 # #     `connect to the desired one`
-    
+dev.find_devs()
+while True:
+    ret = dev.get_devs()
+    if ret:
+        break
 
 """Alternatively, one can query available devices in block mode and connect to the desired one."""
-ret = dev.find_devs(duration=5)
+# ret = dev.find_devs(duration=5)
 print(f"Devs: {ret}")
 dev.connect_device(ret[0])
 
@@ -32,25 +35,23 @@ start = time.time()
 first_data = None
 count = 0
 duration = 10
-try:
-    while time.time() - start < duration:
-        frames = dev.get_data(timeout=0.02)
-        for frame in frames:
-            if not first_data:
-                first_data = time.time()
-                print(f"First packet delay: {first_data-start}")
-            count += 1
-    print(f"average fs:{count/(time.time()-first_data)}")
+while time.time() - start < duration:
+    frames = dev.get_data(timeout=0.01)
+    for frame in frames:
+        if not first_data:
+            first_data = time.time()
+            print(f"First packet delay: {first_data-start}")
+        count += 1
+print(f"average fs:{count/(time.time()-first_data)}")
 
-    # dev.stop_acquisition()
+# dev.stop_acquisition()
 
-    dev.start_acquisition_impedance()
-    start = time.time()
-    while time.time() - start < duration:
-        print(f"Impedance: {dev.get_impedance()}")
-        time.sleep(2)
-except KeyboardInterrupt:
-    pass
+dev.start_acquisition_impedance()
+start = time.time()
+while time.time() - start < duration:
+    print(f"Impedance: {dev.get_impedance()}")
+    time.sleep(2)
+
 
 dev.close_dev()
 print(">>>test finished<<<")
