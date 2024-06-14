@@ -5,7 +5,7 @@ from enum import Enum
 from queue import Queue
 from threading import Thread
 from typing import Literal, Optional
-
+from datetime import datetime
 from .data_parser import Parser
 from .physical_interface import get_interface, get_sock
 
@@ -251,7 +251,6 @@ class iRecorder(Thread):
 
         Raises:
             Exception: if device not connected or in data acquisition mode.
-
         """
         if self.__socket_flag:
             self.__raise_sock_error()
@@ -524,7 +523,7 @@ class iRecorder(Thread):
                 if self.__status == iRecorder.Dev.IDLE_START:
                     self.__socket_flag = 5
                 self.__status = iRecorder.Dev.TERMINATE_START
-        print("Data thread closed")
+        print(f"Data thread closed. {datetime.now()}")
 
     def __idle_state(self):
         timestamp = time.time()

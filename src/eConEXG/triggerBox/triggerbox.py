@@ -13,15 +13,13 @@ class triggerBoxWireless:
         from serial.tools.list_ports import comports
 
         if not port:
-            ports = comports()
-        else:
-            ports = [port]
-        for port in ports:
-            if port.pid == 0x6001 and port.vid == 0x0403:
-                self.dev = Serial(port.device, baudrate=115200, timeout=1)
-                break
-        else:
-            raise Exception("Trigger box not found")
+            for ports in comports():
+                if ports.pid == 0x6001 and ports.vid == 0x0403:
+                    port = ports.device
+                    break
+            else:
+                raise Exception("Trigger box not found")
+        self.dev = Serial(port, baudrate=115200, timeout=1)
         self.__last_timestamp = time.perf_counter()
         self.__warn = "Marker interval too short, amplifier may fail to receive it. Suggested interval is above 50ms"
         time.sleep(0.1)
@@ -62,15 +60,13 @@ class triggerBoxWired:
         from serial.tools.list_ports import comports
 
         if not port:
-            ports = comports()
-        else:
-            ports = [port]
-        for port in ports:
-            if port.pid == 0x5740 and port.vid == 0x0483:
-                self.dev = Serial(port.device, timeout=1)
-                break
-        else:
-            raise Exception("Trigger box not found")
+            for ports in comports():
+                if ports.pid == 0x5740 and ports.vid == 0x0483:
+                    port = ports.device
+                    break
+            else:
+                raise Exception("Trigger box not found")
+        self.dev = Serial(port, timeout=1)
 
     def sendMarker(self, marker: int):
         if not isinstance(marker, int):
@@ -90,21 +86,20 @@ class lightStimulator:
 
         self.wait_time = 0.1
         self.channels = 6
+
         if not port:
-            ports = comports()
-        else:
-            ports = [port]
-        for port in ports:
-            if (
-                port.pid == 0x6001
-                and port.vid == 0x0403
-                and port.serial_number in ["LIGHTSTIMA", "LIGHTSTIM"]
-            ):
-                self.dev = Serial(port.device, baudrate=115200, timeout=2)
-                self.dev.read_all()
-                break
-        else:
-            raise Exception("Light stimulator not found")
+            for ports in comports():
+                if (
+                    ports.pid == 0x6001
+                    and ports.vid == 0x0403
+                    and ports.serial_number in ["LIGHTSTIMA", "LIGHTSTIM"]
+                ):
+                    port = ports.device
+                    break
+            else:
+                raise Exception("Light stimulator not found")
+        self.dev = Serial(port, baudrate=115200, timeout=2)
+        self.dev.read_all()
 
     def vep_mode(self, fs: list[Optional[float]] = [1, 1, 1, 1, 1, 1]):
         """
