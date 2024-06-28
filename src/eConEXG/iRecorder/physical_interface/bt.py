@@ -1,9 +1,10 @@
-from . import bluetooth
 from queue import Queue
 from threading import Thread
-from typing import Union, Literal
+from typing import Literal
 
-CHANNELS: Union[Literal[16], Literal[8]] = 16
+from . import bluetooth
+
+CHANNELS: Literal["W8", "W16"] = "W16"
 
 
 class bt(Thread):
@@ -35,10 +36,10 @@ class bt(Thread):
             for device in nearby_devices:
                 addr = device[0]
                 name = device[1]
-                if CHANNELS == 16:
+                if CHANNELS == "W16":
                     if "iRecorder-" not in name:
                         continue
-                elif CHANNELS == 8:
+                elif CHANNELS == "W8":
                     if "iRecorder8-" not in name:
                         continue
                 if name not in added_devices:

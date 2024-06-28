@@ -1,7 +1,11 @@
-from serial.tools.list_ports import comports
+import time
 from queue import Queue
 from threading import Thread
-import time
+from typing import Literal
+
+from serial.tools.list_ports import comports
+
+CHANNELS: Literal["USB8", "USB32"] = "USB32"
 
 
 class com(Thread):

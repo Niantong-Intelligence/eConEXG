@@ -567,7 +567,9 @@
 
               <details class="quote">
                 <summary>Source code in <code>src\eConEXG\triggerBox\triggerbox.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">51</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
 <span class="normal">52</span>
 <span class="normal">53</span>
 <span class="normal">54</span>
@@ -595,11 +597,7 @@
 <span class="normal">76</span>
 <span class="normal">77</span>
 <span class="normal">78</span>
-<span class="normal">79</span>
-<span class="normal">80</span>
-<span class="normal">81</span>
-<span class="normal">82</span>
-<span class="normal">83</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">triggerBoxWired</span><span class="p">:</span>
+<span class="normal">79</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">triggerBoxWired</span><span class="p">:</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Args:</span>
@@ -613,15 +611,13 @@
         <span class="kn">from</span> <span class="nn">serial.tools.list_ports</span> <span class="kn">import</span> <span class="n">comports</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">port</span><span class="p">:</span>
-            <span class="n">ports</span> <span class="o">=</span> <span class="n">comports</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">ports</span> <span class="o">=</span> <span class="p">[</span><span class="n">port</span><span class="p">]</span>
-        <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">ports</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">port</span><span class="o">.</span><span class="n">pid</span> <span class="o">==</span> <span class="mh">0x5740</span> <span class="ow">and</span> <span class="n">port</span><span class="o">.</span><span class="n">vid</span> <span class="o">==</span> <span class="mh">0x0483</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">dev</span> <span class="o">=</span> <span class="n">Serial</span><span class="p">(</span><span class="n">port</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-                <span class="k">break</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Trigger box not found&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">ports</span> <span class="ow">in</span> <span class="n">comports</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">ports</span><span class="o">.</span><span class="n">pid</span> <span class="o">==</span> <span class="mh">0x5740</span> <span class="ow">and</span> <span class="n">ports</span><span class="o">.</span><span class="n">vid</span> <span class="o">==</span> <span class="mh">0x0483</span><span class="p">:</span>
+                    <span class="n">port</span> <span class="o">=</span> <span class="n">ports</span><span class="o">.</span><span class="n">device</span>
+                    <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Trigger box not found&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dev</span> <span class="o">=</span> <span class="n">Serial</span><span class="p">(</span><span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">sendMarker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">marker</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">marker</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
@@ -714,7 +710,9 @@ the function will try to find the trigger box automatically.</p>
 
             <details class="quote">
               <summary>Source code in <code>src\eConEXG\triggerBox\triggerbox.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">52</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
 <span class="normal">53</span>
 <span class="normal">54</span>
 <span class="normal">55</span>
@@ -731,11 +729,7 @@ the function will try to find the trigger box automatically.</p>
 <span class="normal">66</span>
 <span class="normal">67</span>
 <span class="normal">68</span>
-<span class="normal">69</span>
-<span class="normal">70</span>
-<span class="normal">71</span>
-<span class="normal">72</span>
-<span class="normal">73</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Args:</span>
 <span class="sd">        port: The serial port of the trigger box. If not given,</span>
@@ -748,15 +742,13 @@ the function will try to find the trigger box automatically.</p>
     <span class="kn">from</span> <span class="nn">serial.tools.list_ports</span> <span class="kn">import</span> <span class="n">comports</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">port</span><span class="p">:</span>
-        <span class="n">ports</span> <span class="o">=</span> <span class="n">comports</span><span class="p">()</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">ports</span> <span class="o">=</span> <span class="p">[</span><span class="n">port</span><span class="p">]</span>
-    <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">ports</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">port</span><span class="o">.</span><span class="n">pid</span> <span class="o">==</span> <span class="mh">0x5740</span> <span class="ow">and</span> <span class="n">port</span><span class="o">.</span><span class="n">vid</span> <span class="o">==</span> <span class="mh">0x0483</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">dev</span> <span class="o">=</span> <span class="n">Serial</span><span class="p">(</span><span class="n">port</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-            <span class="k">break</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Trigger box not found&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ports</span> <span class="ow">in</span> <span class="n">comports</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">ports</span><span class="o">.</span><span class="n">pid</span> <span class="o">==</span> <span class="mh">0x5740</span> <span class="ow">and</span> <span class="n">ports</span><span class="o">.</span><span class="n">vid</span> <span class="o">==</span> <span class="mh">0x0483</span><span class="p">:</span>
+                <span class="n">port</span> <span class="o">=</span> <span class="n">ports</span><span class="o">.</span><span class="n">device</span>
+                <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Trigger box not found&quot;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dev</span> <span class="o">=</span> <span class="n">Serial</span><span class="p">(</span><span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

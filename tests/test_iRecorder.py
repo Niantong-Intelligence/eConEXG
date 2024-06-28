@@ -1,14 +1,13 @@
 from eConEXG import iRecorder
 import time
 
-dev = iRecorder(dev_type="USB32")
-print(dev.get_dev_info())
-
+dev = iRecorder(dev_type="USB8")
 
 """query and set frequency, optional, if not set, the lowest available frequency will be used."""
 # print(dev.get_available_frequency())
 # dev.set_frequency(1000)
 
+print(dev.get_dev_info())
 
 """query available devices continously"""
 # dev.find_devs()

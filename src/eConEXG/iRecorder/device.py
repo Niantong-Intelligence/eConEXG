@@ -1,6 +1,5 @@
 import queue
 import time
-import traceback
 from enum import Enum
 from queue import Queue
 from threading import Thread
@@ -21,7 +20,7 @@ class iRecorder(Thread):
         TERMINATE = 40  # Init state
         TERMINATE_START = 41
 
-    def __init__(self, dev_type: Literal["W8", "W16", "W32", "USB32"]):
+    def __init__(self, dev_type: Literal["W8", "USB8", "W16", "W32", "USB32"]):
         """
         Args:
             dev_type: iRecorder device type.
@@ -137,23 +136,23 @@ class iRecorder(Thread):
         Returns:
             Available sample frequencies in Hz.
         """
-        if self.__dev_args["type"] == "USB32":
+        if self.__dev_args["type"] in ["USB32", "USB8"]:
             return [500, 1000, 2000]
         else:
             return [500]
 
     def set_frequency(self, fs: int = None):
-        """Update device sample frequency, can only be invoked before `connect_device`.
+        """Update device sample frequency, this methodshould be invoked before `connect_device`.
 
         Args:
             fs: sample frequency in Hz, if `None` or fs not in `get_available_frequency()`,
                 it will fallback to the lowest available frequency.
 
         Raises:
-            Exception: if device already connected.
+            Exception: Device is already connected.
         """
         if self.is_alive():
-            raise Exception("Already connected to device")
+            raise Exception("Set frequency failed, device already connected.")
         default = self.get_available_frequency()[0]
         if fs is None:
             fs = default
@@ -234,12 +233,12 @@ class iRecorder(Thread):
             self.__raise_sock_error()
         return None
 
-    def get_data(self, timeout: Optional[float] = None) -> list[Optional[list]]:
+    def get_data(self, timeout: Optional[float] = 0.02) -> list[Optional[list]]:
         """
         Acquire amplifier data, make sure this function is called in a loop so that it can continuously read the data.
 
         Args:
-            timeout: it blocks at most `timeout` seconds and return, otherwise it returns until new data is available.
+            timeout: it blocks at most `timeout` seconds and return, if set to `None`, it blocks until new data is available.
 
         Returns:
             A list of frames, each frame is a list contains all wanted eeg channels and triggerbox channel,
@@ -494,13 +493,12 @@ class iRecorder(Thread):
                     if self.__lsl_flag:
                         self._lsl_stream.push_chuck(ret)
             except Exception:
-                traceback.print_exc()
                 if (self.__dev_args["type"] == "W32") and (retry < 1):
                     try:
                         print("Wi-Fi reconnecting...")
                         time.sleep(3)
                         self.dev.close_socket()
-                        self.dev = self.__dev_sock(self.__dev_args, retry_timeout=2)
+                        self.dev = self.__dev_sock(self.__dev_args, retry_timeout=3)
                         retry += 1
                         continue
                     except Exception:
@@ -537,19 +535,17 @@ class iRecorder(Thread):
                 timestamp = time.time()
                 # print("Ah, ah, ah, ah\nStayin' alive, stayin' alive")
             except Exception:
-                traceback.print_exc()
+                # traceback.print_exc()
                 self.__socket_flag = 5
                 self.__status = iRecorder.Dev.TERMINATE_START
 
     def __get_chs(self) -> int:
         dev_type = self.__dev_args["type"]
-        if dev_type == "W8":
+        if dev_type in ["W8", "USB8"]:
             return 8
-        elif dev_type == "W16":
+        elif dev_type in ["W16"]:
             return 16
-        elif dev_type == "W32":
-            return 32
-        elif dev_type == "USB32":
+        elif dev_type in ["W32", "USB32"]:
             return 32
         else:
             raise ValueError("Invalid device type")

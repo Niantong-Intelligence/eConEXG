@@ -11,7 +11,7 @@ def get_interface(TYPE):
             from .bt import bt as phy_interface
             from . import bt
 
-            bt.CHANNELS = 8 if TYPE == "W8" else 16
+            bt.CHANNELS = TYPE
         else:
             raise NotImplementedError("Unsupported platform")
 
@@ -25,12 +25,13 @@ def get_interface(TYPE):
         else:
             raise NotImplementedError("Unsupported platform")
 
-    elif TYPE in ["USB32"]:
+    elif TYPE in ["USB32", "USB8"]:
         from .com import com as phy_interface
+        from . import com
 
+        com.CHANNELS = TYPE
     else:
         raise NotImplementedError("Unsupported interface type")
-
     return phy_interface
 
 
@@ -42,7 +43,7 @@ def get_sock(TYPE):
     elif DEVTYPE in ["W32"]:
         from .device_socket import wifi_socket as sock
 
-    elif DEVTYPE in ["USB32"]:
+    elif DEVTYPE in ["USB32", "USB8"]:
         from .device_socket import com_socket as sock
     else:
         raise NotImplementedError("Unsupported socket type")

@@ -4,6 +4,7 @@ dynamic = ["version"]
 authors = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
 maintainers = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
 description = "SDK for Niantong devices."
+keywords = ["eeg", "emg", "niantong", "econ"]
 dependencies = [
     "numpy",
     "pyserial>=3.5",
