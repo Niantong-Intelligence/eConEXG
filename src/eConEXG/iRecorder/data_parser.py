@@ -37,6 +37,7 @@ class Parser:
 
     def update_chs(self, chs: list[int]):
         self.ch_idx = chs[:]
+        self.impedance = None
 
     def _cal_imp(self, frames):
         for data in frames:

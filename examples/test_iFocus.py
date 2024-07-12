@@ -8,6 +8,8 @@ dev = iFocus()
 # dev=iFocus(ret[0])
 
 dev.start_acquisition_data()
+dev.open_lsl_eeg()
+dev.open_lsl_imu()
 start = time.time()
 count = 0
 

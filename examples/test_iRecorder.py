@@ -1,11 +1,11 @@
 from eConEXG import iRecorder
 import time
 
-dev = iRecorder(dev_type="USB8")
+dev = iRecorder(dev_type="W8")
 
 """query and set frequency, optional, if not set, the lowest available frequency will be used."""
 # print(dev.get_available_frequency())
-# dev.set_frequency(1000)
+# dev.set_frequency(500)
 
 print(dev.get_dev_info())
 
@@ -44,7 +44,7 @@ while time.time() - start < duration:
 print(f"average fs:{count/(time.time()-first_data)}")
 
 # dev.stop_acquisition()
-
+print()
 dev.start_acquisition_impedance()
 start = time.time()
 while time.time() - start < duration:

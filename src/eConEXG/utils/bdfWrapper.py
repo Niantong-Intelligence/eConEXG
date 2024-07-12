@@ -1,8 +1,9 @@
-from threading import Event, Thread
-from queue import Queue
-import numpy as np
-from pyedflib import EdfWriter, FILETYPE_BDFPLUS
 from datetime import datetime
+from queue import Queue
+from threading import Event, Thread
+
+import numpy as np
+from pyedflib import FILETYPE_BDFPLUS, EdfWriter
 
 
 class bdfSaver(EdfWriter, Thread):
@@ -51,11 +52,10 @@ class bdfSaver(EdfWriter, Thread):
             infos.append(info.copy())
         self.setSignalHeaders(infos)
 
-    def write_chuck(self, frames: list):
+    def write_chunk(self, frames: list):
         for frame in frames:
             if frame[-1] > 0:  # trigger box trigger
                 self.write_Annotation(f"T{int(frame[-1])}")
-            # update data for plotting
             self.__data_write[:, self.__save_cnt] = frame[:-1]
             self.__save_cnt += 1
             self._data_position += 1

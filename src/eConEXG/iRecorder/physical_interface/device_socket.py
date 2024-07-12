@@ -1,4 +1,5 @@
 import time
+from typing import Optional
 
 
 class wifi_socket:
@@ -6,6 +7,7 @@ class wifi_socket:
         from socket import socket, AF_INET, SOCK_STREAM
 
         self.__sock_args = sock_args
+        self.length = sock_args["_length"]
         self.__socket = socket(AF_INET, SOCK_STREAM)
         self.__socket.settimeout(retry_timeout)
         self.__socket.connect(self.__sock_args["sock"])
@@ -25,7 +27,9 @@ class wifi_socket:
     def start_data(self):
         self.__socket.send(b"W")
 
-    def recv_socket(self, buffersize: int = 2048):
+    def recv_socket(self, buffersize: Optional[int] = None):
+        if buffersize is None:
+            buffersize = self.length
         return self.__socket.recv(buffersize)
 
     def stop_recv(self):
@@ -43,12 +47,17 @@ class bluetooth_socket:
 
         self.delay = 0.2
         self.__sock_args = sock_args
+        self.length = sock_args["_length"]
         self.__socket = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM)
         self.__socket.connect(self.__sock_args["sock"])
         self.__socket.settimeout(5)
+        time.sleep(self.delay)
 
     def close_socket(self):
-        self.__socket.close()
+        try:
+            self.__socket.shutdown(2)
+        finally:
+            self.__socket.close()
         time.sleep(self.delay)
         self.__socket = None
 
@@ -60,7 +69,9 @@ class bluetooth_socket:
         self.__socket.send(b"W")
         time.sleep(self.delay)
 
-    def recv_socket(self, buffersize: int = 550):
+    def recv_socket(self, buffersize: Optional[int] = None):
+        if buffersize is None:
+            buffersize = self.length
         return self.__socket.recv(buffersize)
 
     def stop_recv(self):
@@ -75,7 +86,7 @@ class bluetooth_socket:
 
 
 class com_socket:
-    order = {
+    cmd = {
         500: b"\x55\x66\x52\x41\x54\x45\x01\x0a",
         1000: b"\x55\x66\x52\x41\x54\x45\x02\x0a",
         2000: b"\x55\x66\x52\x41\x54\x45\x03\x0a",
@@ -93,15 +104,16 @@ class com_socket:
 
         self.command_wait = 0.05
         self.__sock_args = sock_args
+        self.length = sock_args["_length"]
         self.__socket = Serial(timeout=5)
         self.__socket.port = self.__sock_args["sock"]
         self.__socket.open()
-        self.__socket.write(self.order[self.__sock_args["fs"]])
+        self.__socket.write(self.cmd[self.__sock_args["fs"]])
         time.sleep(self.command_wait)
         self.__socket.read_all()
 
     def close_socket(self):
-        self.__socket.write(self.order["R"])
+        self.__socket.write(self.cmd["R"])
         # self.__socket.write(self.order['close'])
         time.sleep(self.command_wait)
         self.__socket.read_all()
@@ -109,23 +121,30 @@ class com_socket:
         self.__socket = None
 
     def start_impe(self):
-        ack = self.__socket.write(self.order["Z"])
+        ack = self.__socket.write(self.cmd["Z"])
         self.__socket.read(ack)
 
     def start_data(self):
-        ack = self.__socket.write(self.order["W"])
+        ack = self.__socket.write(self.cmd["W"])
         self.__socket.read(ack)
 
-    def recv_socket(self, buffersize: int = 1020):
+    def recv_socket(self, buffersize: Optional[int] = None):
+        if buffersize is None:
+            buffersize = self.length
         return self.__socket.read(buffersize)
 
     def stop_recv(self):
-        self.__socket.write(self.order["R"])
+        self.__socket.write(self.cmd["R"])
         time.sleep(self.command_wait)
         self.__socket.read_all()
 
     def send_heartbeat(self):
-        ack = self.__socket.write(self.order["B"])
+        ack = self.__socket.write(self.cmd["B"])
         ret = self.__socket.read(ack + 1)
+        # print(ret.hex())
+        if not ret:
+            raise Exception("Isolator not plugged in.")
+        if len(ret) != ack + 1:
+            raise Exception("Invalid response format from battery query.")
         battery = ret[-1]
         return battery

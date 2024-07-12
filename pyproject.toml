@@ -5,15 +5,7 @@ authors = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
 maintainers = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
 description = "SDK for Niantong devices."
 keywords = ["eeg", "emg", "niantong", "econ"]
-dependencies = [
-    "numpy",
-    "pyserial>=3.5",
-    "netifaces;platform_system=='Windows'",
-    "netifaces;platform_system=='Darwin'",
-    "netifaces2;platform_system=='Linux'",
-    "pywifi>=1.1.12;platform_system=='Windows'",
-    "comtypes;platform_system=='Windows'",
-]
+dependencies = ["numpy", "pyserial>=3.5"]
 readme = "README.md"
 requires-python = ">= 3.9"
 classifiers = [
@@ -28,10 +20,18 @@ path = "src/eConEXG/version.py"
 [project.urls]
 Homepage = "https://github.com/Niantong-Intelligence/eConEXG"
 Issues = "https://github.com/Niantong-Intelligence/eConEXG/issues"
+Documentation = "https://niantong-intelligence.github.io/eConEXG/"
 
 [project.optional-dependencies]
 bdf = ["pyEDFlib>=0.1.37"]
 lsl = ["pylsl>=1.16.2"]
+wifi = [
+  "netifaces;platform_system=='Windows'",
+  "netifaces;platform_system=='Darwin'",
+  "netifaces2;platform_system=='Linux'",
+  "pywifi>=1.1.12;platform_system=='Windows'",
+  "comtypes;platform_system=='Windows'",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -40,15 +40,12 @@ build-backend = "hatchling.build"
 [tool.rye]
 managed = true
 dev-dependencies = [
-    "pytest>=8.1.1",
-    "mkdocs>=1.6.0",
-    "mkdocstrings[python]>=0.25.1",
-    "mkdocs-material>=9.5.25",
+  "pytest>=8.1.1",
+  "mkdocs>=1.6.0",
+  "mkdocstrings[python]>=0.25.1",
+  "mkdocs-material>=9.5.25",
+  "mkdocs-include-markdown-plugin>=6.2.1",
 ]
-# [tool.ruff.lint]
-# select = ["NPY201"]
-# [tool.uv.pip]
-# uv pip install --reinstall numpy
 
 [tool.hatch.build]
 artifacts = ["*.so", "*.dll", "*.pyd"]

@@ -1,4 +1,8 @@
-site_name: "eConEXG SDK"
+site_name: eConEXG
+site_description: SDK for Niantong devices.
+repo_name: Niantong-Intelligence/eConEXG
+repo_url: https://github.com/Niantong-Intelligence/eConEXG
+copyright: Copyright &copy; 2024 <a href=http://econtek.cn/>Niantong Intelligence Technology Co., Ltd.</a>
 
 nav:
   - Home: index.md
@@ -9,11 +13,15 @@ nav:
       - Wireless: triggerBoxWireless.md
       - Wired: triggerBoxWire.md
     - Light Stimulator: lightStimulator.md
+  - Changelog: changelog.md
 
 theme:
   favicon: img/favicon.ico
   logo: img/favicon.ico
   name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
   palette:
     # Palette toggle for automatic mode
     - media: "(prefers-color-scheme)"
@@ -38,3 +46,15 @@ theme:
 plugins:
 - search
 - mkdocstrings
+- include-markdown:
+    preserve_includer_indent: true
+
+extra:
+  version:
+    provider: mike
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/Niantong-Intelligence/eConEXG
+    # - icon: fontawesome/solid/link #material/web
+    #   link: http://econtek.cn/
+

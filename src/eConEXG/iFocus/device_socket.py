@@ -9,6 +9,26 @@ class sock:
         self.dev = Serial(port=port, baudrate=921600, timeout=3)
         time.sleep(self.delay)
 
+    @staticmethod
+    def _find_devs() -> list:
+        from serial.tools.list_ports import comports
+        from serial import Serial, serialutil
+
+        ret = []
+        devices = comports()
+        for device in devices:
+            if "FTDI" in device.manufacturer:
+                if device.serial_number in ["IFOCUSA", "iFocus"]:
+                    try:
+                        dev = Serial(port=device.device, baudrate=921600, timeout=1)
+                    except serialutil.SerialException:
+                        continue
+                    dev.close()
+                    ret.append(device.device)
+        if len(ret) == 0:
+            raise Exception("iFocus device not found")
+        return ret
+
     def connect_socket(self):
         self.start_data()
         start = time.time()
@@ -33,7 +53,10 @@ class sock:
         time.sleep(self.delay)
 
     def close_socket(self):
-        self.dev.write(b"\x02")
+        try:
+            self.dev.write(b"\x02")
+        except Exception:
+            pass
         time.sleep(self.delay)
         self.dev.close()
         self.dev = None

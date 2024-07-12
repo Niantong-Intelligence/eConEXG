@@ -18,6 +18,15 @@ class iFocus(Thread):
         TERMINATE = 40
         TERMINATE_START = 41
 
+    _dev_args = {
+        "type": "iFocus",
+        "fs_eeg": 250,
+        "fs_imu": 50,
+        "channel_eeg": {0: "CH0"},
+        "channel_imu": {0: "X", 1: "Y", 2: "Z"},
+        "AdapterInfo": "Serial Port",
+    }
+
     def __init__(self, port: Optional[str] = None) -> None:
         """
         Args:
@@ -39,6 +48,9 @@ class iFocus(Thread):
                 raise e
         self.__status = iFocus.Dev.IDLE_START
         self.__socket_flag = 0
+        self.__lsl_imu_flag = False
+        self.__lsl_eeg_flag = False
+        self._dev_args["name"] = port
         self.start()
 
     @staticmethod
@@ -52,24 +64,14 @@ class iFocus(Thread):
         Raises:
             Exception: if no iFocus device found.
         """
-        from serial.tools.list_ports import comports
+        return sock._find_devs()
 
-        ret = []
-        devices = comports()
-        for device in devices:
-            if "FTDI" in device.manufacturer:
-                if device.serial_number in ["IFOCUSA", "iFocus"]:
-                    ret.append(device.device)
-        if len(ret) == 0:
-            raise Exception("iFocus device not found")
-        return ret
-
-    def get_data(self, timeout: Optional[float] = None) -> list[Optional[list]]:
+    def get_data(self, timeout: Optional[float] = 0.02) -> list[Optional[list]]:
         """
         Acquire iFocus data, make sure this function is called in a loop so that it can continuously read the data.
 
         Args:
-            timeout: it blocks at most 'timeout' seconds and return, if set to `None`, blocks until new data available.
+            timeout: Non-negative value, blocks at most 'timeout' seconds and return, if set to `None`, blocks until new data available.
 
         Returns:
             A list of frames, each frame is made up of 5 eeg data and 1 imu data in a shape as below:
@@ -119,6 +121,71 @@ class iFocus(Thread):
         if self.__status != iFocus.Dev.IDLE:
             self.__raise_sock_error()
 
+    def open_lsl_eeg(self):
+        """
+        Open LSL EEG stream, can be invoked after `start_acquisition_data()`.
+
+        Raises:
+            Exception: if data acquisition not started or LSL stream already opened.
+            LSLException: if LSL stream creation failed.
+            importError: if `pylsl` is not installed or liblsl not installed for unix like system.
+        """
+        if self.__status != iFocus.Dev.SIGNAL:
+            raise Exception("Data acquisition not started, please start first.")
+        if hasattr(self, "_lsl_eeg"):
+            raise Exception("LSL stream already opened.")
+        from ..utils.lslWrapper import lslSender
+
+        self._lsl_eeg = lslSender(
+            self._dev_args["channel_eeg"],
+            f"{self._dev_args['type']}EEG{self._dev_args['name'][-2:]}",
+            "EEG",
+            self._dev_args["fs_eeg"],
+            with_trigger=False,
+        )
+        self.__lsl_eeg_flag = True
+
+    def close_lsl_eeg(self):
+        """
+        Close LSL EEG stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
+        """
+        self.__lsl_eeg_flag = False
+        if hasattr(self, "_lsl_eeg"):
+            del self._lsl_eeg
+
+    def open_lsl_imu(self):
+        """
+        Open LSL IMU stream, can be invoked after `start_acquisition_data()`.
+
+        Raises:
+            Exception: if data acquisition not started or LSL stream already opened.
+            LSLException: if LSL stream creation failed.
+            importError: if `pylsl` is not installed or liblsl not installed for unix like system.
+        """
+        if self.__status != iFocus.Dev.SIGNAL:
+            raise Exception("Data acquisition not started, please start first.")
+        if hasattr(self, "_lsl_imu"):
+            raise Exception("LSL stream already opened.")
+        from ..utils.lslWrapper import lslSender
+
+        self._lsl_imu = lslSender(
+            self._dev_args["channel_imu"],
+            f"{self._dev_args['type']}IMU{self._dev_args['name'][-2:]}",
+            "IMU",
+            self._dev_args["fs_imu"],
+            unit="degree",
+            with_trigger=False,
+        )
+        self.__lsl_imu_flag = True
+
+    def close_lsl_imu(self):
+        """
+        Close LSL IMU stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
+        """
+        self.__lsl_imu_flag = False
+        if hasattr(self, "_lsl_imu"):
+            del self._lsl_imu
+
     def close_dev(self):
         """
         Close device connection and release resources.
@@ -146,6 +213,12 @@ class iFocus(Thread):
                 data = self.dev.recv_socket()
                 ret = self.__parser.parse_data(data)
                 if ret:
+                    if self.__lsl_eeg_flag:
+                        self._lsl_eeg.push_chunk(
+                            [frame for frames in ret for frame in frames[:-1]]
+                        )
+                    if self.__lsl_imu_flag:
+                        self._lsl_imu.push_chunk([frame[-1] for frame in ret])
                     self.__save_data.put(ret)
             except Exception:
                 traceback.print_exc()
@@ -153,7 +226,9 @@ class iFocus(Thread):
                 self.__status = iFocus.Dev.TERMINATE_START
 
         # clear buffer
-        self.dev.stop_recv()
+        self.close_lsl_eeg()
+        self.close_lsl_imu()
+        # self.dev.stop_recv()
         self.__parser.clear_buffer()
         self.__save_data.put(None)
         while self.__save_data.get() is not None:
@@ -166,7 +241,6 @@ class iFocus(Thread):
                 if self.__status == iFocus.Dev.IDLE_START:
                     self.__socket_flag = 5
                 self.__status = iFocus.Dev.TERMINATE_START
-        print("Data thread closed")
 
     def run(self):
         print("iFocus connected")

@@ -3,7 +3,7 @@ import time
 
 
 class triggerBoxWireless:
-    def __init__(self, port=None):
+    def __init__(self, port: str = None):
         """
         Args:
             port: The serial port of the trigger box. If not given,

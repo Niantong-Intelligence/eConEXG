@@ -9,6 +9,7 @@ class lslSender(StreamOutlet):
         devtype="EEG",
         fs=500,
         with_trigger=True,
+        unit="microvolts",
         precision=cf_double64,
     ):
         info = StreamInfo(
@@ -25,8 +26,8 @@ class lslSender(StreamOutlet):
         for label in elctds.values():
             ch = chns.append_child("channel")
             ch.append_child_value("label", label)
-            ch.append_child_value("unit", "microvolts")
-            ch.append_child_value("type", "EEG")
+            ch.append_child_value("unit", unit)
+            ch.append_child_value("type", devtype)
             ch.append_child_value("scaling_factor", "1")
         # Trigger
         if with_trigger:
@@ -36,6 +37,3 @@ class lslSender(StreamOutlet):
             ch.append_child_value("type", "Trigger Box")
             ch.append_child_value("scaling_factor", "1")
         super().__init__(info, max_buffered=60)
-
-    def push_chuck(self, frames):
-        super().push_chunk(frames)
