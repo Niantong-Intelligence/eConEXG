@@ -18,7 +18,7 @@ class lslSender(StreamOutlet):
             channel_count=len(elctds) + (1 if with_trigger else 0),  # Trigger
             nominal_srate=fs,
             channel_format=precision,
-            source_id=dev,  # important
+            source_id=dev,
         )
         maf = "Niantong Intelligence Technology Co., Ltd."
         info.desc().append_child_value("manufacturer", maf)

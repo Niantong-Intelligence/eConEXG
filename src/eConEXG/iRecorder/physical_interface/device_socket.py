@@ -143,7 +143,7 @@ class com_socket:
         ret = self.__socket.read(ack + 1)
         # print(ret.hex())
         if not ret:
-            raise Exception("Isolator not plugged in.")
+            raise Exception("Device not ready, please retry.")
         if len(ret) != ack + 1:
             raise Exception("Invalid response format from battery query.")
         battery = ret[-1]

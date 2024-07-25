@@ -2,6 +2,13 @@
 
 This file contains tracks the changes landing in eConEXG. 
 <!-- released start -->
+## 0.1.12
+
+Released on 2024-07-25.
+
+* Fix equipment format warning issue on bdf save.
+* Rounding physical_max value of bdf file，resulting to more accurate data precision.
+* Fix `sendMarker` not working in `triggerBox` under python3.11.
 
 ## 0.1.11
 

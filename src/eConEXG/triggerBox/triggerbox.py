@@ -8,6 +8,9 @@ class triggerBoxWireless:
         Args:
             port: The serial port of the trigger box. If not given,
                 the function will try to find the trigger box automatically.
+
+        Raises:
+            Exception: If the trigger box is not found.
         """
         from serial import Serial
         from serial.tools.list_ports import comports
@@ -28,18 +31,20 @@ class triggerBoxWireless:
         """
         Send a marker to the trigger box.
 
-        Parameters
-        ----------
-            marker : int
-                range from `1` to `255`, `13` is not available and reserved for internal use.
+        Args:
+            marker: range from `1` to `255`, `13` is not available and reserved for internal use.
+
+        Raises:
+            Exception: If the marker is invalid.
         """
-        if time.perf_counter() - self.__last_timestamp < 0.045:
+        if time.perf_counter() - self.__last_timestamp < 0.04:
             print(self.__warn)
         if not isinstance(marker, int):
             marker = int(marker)
         if marker == 13 or marker <= 0 or marker > 255:
             raise Exception("Invalid marker")
-        self.dev.write(marker.to_bytes() + b"\x55\x66\x0d")
+        marker = marker.to_bytes(length=1, byteorder="big", signed=False)
+        self.dev.write(marker + b"\x55\x66\x0d")
         self.__last_timestamp = time.perf_counter()
 
     def close_dev(self):
@@ -69,11 +74,20 @@ class triggerBoxWired:
         self.dev = Serial(port, timeout=1)
 
     def sendMarker(self, marker: int):
+        """
+        Send a marker to the trigger box.
+
+        Args:
+            marker: range from `1` to `255`.
+
+        Raises:
+            Exception: If the marker is invalid.
+        """
         if not isinstance(marker, int):
             marker = int(marker)
         if marker <= 0 or marker > 255:
             raise Exception("Invalid marker")
-        self.dev.write(marker.to_bytes())
+        self.dev.write(marker.to_bytes(length=1, byteorder="big", signed=False))
 
     def close_dev(self):
         self.dev.close()
@@ -122,7 +136,6 @@ class lightStimulator:
         self.dev.write(command)
         time.sleep(self.wait_time)
         ret = self.dev.read_all()
-        print(ret)
         if b"SSVEP MODE OK" not in ret:
             raise Exception("Failed to set VEP mode")
 
@@ -141,11 +154,10 @@ class lightStimulator:
         self.dev.write(command)
         time.sleep(self.wait_time)
         ret = self.dev.read_all()
-        print(ret)
         if b"ERP MODE OK" not in ret:
             raise Exception("Failed to set VEP mode")
 
-    def _validate_fs(self, fs: float):
+    def _validate_fs(self, fs: Optional[float]):
         if not isinstance(fs, (int, float)):
             if fs is None:
                 fs = 0

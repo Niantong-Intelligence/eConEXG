@@ -39,8 +39,8 @@ class bdfSaver(EdfWriter, Thread):
         scale = 2**23
         info = {
             "label": "",
-            "physical_max": int((scale - 1) * 0.02235174),
-            "physical_min": int(-scale * 0.02235174),
+            "physical_max": int(round((scale - 1) * 0.02235174)),
+            "physical_min": int(round(-scale * 0.02235174)),
             "digital_max": scale - 1,
             "digital_min": -scale,
             "dimension": "uV",

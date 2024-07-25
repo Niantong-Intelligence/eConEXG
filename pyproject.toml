@@ -39,6 +39,7 @@ build-backend = "hatchling.build"
 
 [tool.rye]
 managed = true
+universal = true
 dev-dependencies = [
   "pytest>=8.1.1",
   "mkdocs>=1.6.0",

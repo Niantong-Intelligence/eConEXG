@@ -469,21 +469,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="sendMarker">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#eConEXG.triggerBoxWireless.sendMarker--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
     </ul>
@@ -621,21 +606,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="sendMarker">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#eConEXG.triggerBoxWireless.sendMarker--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
     </ul>
@@ -709,12 +679,20 @@
 <span class="normal">43</span>
 <span class="normal">44</span>
 <span class="normal">45</span>
-<span class="normal">46</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">triggerBoxWireless</span><span class="p">:</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">triggerBoxWireless</span><span class="p">:</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Args:</span>
 <span class="sd">            port: The serial port of the trigger box. If not given,</span>
 <span class="sd">                the function will try to find the trigger box automatically.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            Exception: If the trigger box is not found.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">from</span> <span class="nn">serial</span> <span class="kn">import</span> <span class="n">Serial</span>
         <span class="kn">from</span> <span class="nn">serial.tools.list_ports</span> <span class="kn">import</span> <span class="n">comports</span>
@@ -735,18 +713,20 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Send a marker to the trigger box.</span>
 
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">            marker : int</span>
-<span class="sd">                range from `1` to `255`, `13` is not available and reserved for internal use.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            marker: range from `1` to `255`, `13` is not available and reserved for internal use.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            Exception: If the marker is invalid.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__last_timestamp</span> <span class="o">&lt;</span> <span class="mf">0.045</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__last_timestamp</span> <span class="o">&lt;</span> <span class="mf">0.04</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__warn</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">marker</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">marker</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">marker</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">marker</span> <span class="o">==</span> <span class="mi">13</span> <span class="ow">or</span> <span class="n">marker</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">marker</span> <span class="o">&gt;</span> <span class="mi">255</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Invalid marker&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dev</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">marker</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">()</span> <span class="o">+</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="se">\x55\x66\x0d</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">marker</span> <span class="o">=</span> <span class="n">marker</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="n">length</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="s2">&quot;big&quot;</span><span class="p">,</span> <span class="n">signed</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dev</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">marker</span> <span class="o">+</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="se">\x55\x66\x0d</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">__last_timestamp</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">close_dev</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -808,6 +788,29 @@ the function will try to find the trigger box automatically.</p>
       </tbody>
     </table>
 
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code>Exception</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the trigger box is not found.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
             <details class="quote">
               <summary>Source code in <code>src\eConEXG\triggerBox\triggerbox.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 6</span>
@@ -829,11 +832,17 @@ the function will try to find the trigger box automatically.</p>
 <span class="normal">22</span>
 <span class="normal">23</span>
 <span class="normal">24</span>
-<span class="normal">25</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Args:</span>
 <span class="sd">        port: The serial port of the trigger box. If not given,</span>
 <span class="sd">            the function will try to find the trigger box automatically.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        Exception: If the trigger box is not found.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">from</span> <span class="nn">serial</span> <span class="kn">import</span> <span class="n">Serial</span>
     <span class="kn">from</span> <span class="nn">serial.tools.list_ports</span> <span class="kn">import</span> <span class="n">comports</span>
@@ -867,17 +876,62 @@ the function will try to find the trigger box automatically.</p>
     <div class="doc doc-contents ">
 
       <p>Send a marker to the trigger box.</p>
-<h4 id="eConEXG.triggerBoxWireless.sendMarker--parameters">Parameters</h4>
-<pre><code>marker : int
-    range from `1` to `255`, `13` is not available and reserved for internal use.
-</code></pre>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>marker</code></td>
+            <td>
+                  <code>int</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>range from <code>1</code> to <code>255</code>, <code>13</code> is not available and reserved for internal use.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code>Exception</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the marker is invalid.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
             <details class="quote">
               <summary>Source code in <code>src\eConEXG\triggerBox\triggerbox.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">27</span>
-<span class="normal">28</span>
-<span class="normal">29</span>
-<span class="normal">30</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">30</span>
 <span class="normal">31</span>
 <span class="normal">32</span>
 <span class="normal">33</span>
@@ -890,22 +944,29 @@ the function will try to find the trigger box automatically.</p>
 <span class="normal">40</span>
 <span class="normal">41</span>
 <span class="normal">42</span>
-<span class="normal">43</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">sendMarker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">marker</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">sendMarker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">marker</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Send a marker to the trigger box.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">        marker : int</span>
-<span class="sd">            range from `1` to `255`, `13` is not available and reserved for internal use.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        marker: range from `1` to `255`, `13` is not available and reserved for internal use.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        Exception: If the marker is invalid.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__last_timestamp</span> <span class="o">&lt;</span> <span class="mf">0.045</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__last_timestamp</span> <span class="o">&lt;</span> <span class="mf">0.04</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__warn</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">marker</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
         <span class="n">marker</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">marker</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">marker</span> <span class="o">==</span> <span class="mi">13</span> <span class="ow">or</span> <span class="n">marker</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">marker</span> <span class="o">&gt;</span> <span class="mi">255</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Invalid marker&quot;</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">dev</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">marker</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">()</span> <span class="o">+</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="se">\x55\x66\x0d</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">marker</span> <span class="o">=</span> <span class="n">marker</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="n">length</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="s2">&quot;big&quot;</span><span class="p">,</span> <span class="n">signed</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dev</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">marker</span> <span class="o">+</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="se">\x55\x66\x0d</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">__last_timestamp</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
             </details>

@@ -132,17 +132,18 @@ class iRecorder(Thread):
 
         return deepcopy(self.__dev_args)
 
-    def get_available_frequency(self) -> list:
-        """Get available sample frequency of device.
+    @staticmethod
+    def get_available_frequency(dev_type: str) -> list:
+        """Get available sample frequencies of different device types.
 
         Returns:
             Available sample frequencies in Hz.
         """
-        if "USB" in self.__dev_args["type"]:
+        if "USB" in dev_type:
             return [500, 1000, 2000]
         return [500]
 
-    def set_frequency(self, fs: int = None):
+    def set_frequency(self, fs: Optional[int] = None):
         """Update device sample frequency, this method should be invoked before `connect_device`.
 
         Args:
@@ -154,10 +155,11 @@ class iRecorder(Thread):
         """
         if self.is_alive():
             raise Exception("Set frequency failed, device already connected.")
-        default = self.get_available_frequency()[0]
+        available = self.get_available_frequency(self.__dev_args["type"])
+        default = available[0]
         if fs is None:
             fs = default
-        if fs not in self.get_available_frequency():
+        if fs not in available:
             print(f"Invalid sample frequency, fallback to {default}Hz")
             fs = default
         self.__dev_args.update({"fs": fs})
@@ -177,7 +179,7 @@ class iRecorder(Thread):
             raise Exception("iRecorder already connected")
         try:
             ret = self.__interface.connect(addr)
-            self.__dev_args.update({"name": addr[-2:], "sock": ret})
+            self.__dev_args.update({"name": addr, "sock": ret})
             self.__dev_args.update({"_length": self.__parser._threshold})
             self.dev = self.__dev_sock(self.__dev_args)
             self.__parser.batt_val = self.dev.send_heartbeat()
@@ -366,7 +368,7 @@ class iRecorder(Thread):
 
         self._lsl_stream = lslSender(
             self.__dev_args["ch_info"],
-            f"iRe{self.__dev_args['type']}{self.__dev_args['name'][-2:]}",
+            f"iRe{self.__dev_args['type']}_{self.__dev_args['name'][-2:]}",
             "EEG",
             self.__dev_args["fs"],
             with_trigger=True,
@@ -405,7 +407,7 @@ class iRecorder(Thread):
             filename,
             self.__dev_args["ch_info"],
             self.__dev_args["fs"],
-            f"iRecorder {self.__dev_args['type']}",
+            f"iRecorder_{self.__dev_args['type']}_{self.__dev_args['name']}",
         )
         self.__bdf_flag = True
 
@@ -497,7 +499,7 @@ class iRecorder(Thread):
                 if (self.__dev_args["type"] == "W32") and (retry < 1):
                     try:
                         print("Wi-Fi reconnecting...")
-                        time.sleep(3)
+                        time.sleep(1)
                         self.dev.close_socket()
                         self.dev = self.__dev_sock(self.__dev_args, retry_timeout=3)
                         retry += 1

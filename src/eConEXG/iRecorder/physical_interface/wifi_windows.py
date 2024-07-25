@@ -24,7 +24,7 @@ class wifiWindows(Thread):
         wifi = pywifi.PyWiFi()
         interface = None
         for interface in wifi.interfaces():
-            if any(sub in interface.name() for sub in ["USB", "usb"]):
+            if "usb" in interface.name().lower():
                 break
         if interface is None:
             warn = "Wi-Fi interface not found, please insert a USB interface card."
@@ -70,10 +70,10 @@ class wifiWindows(Thread):
             )
             output = output.decode(locale.getpreferredencoding())
             for profile in output.split("\r\n\r\n"):
-                if (iface.lower() in profile) or (iface in profile):
+                if iface.lower() in profile.lower():
                     lines = profile.split("\n")
                     for line in lines:
-                        if "SSID" in line:
+                        if "ssid" in line.lower():
                             return line.split(":")[1].strip()
         except subprocess.CalledProcessError:
             print_exc()
@@ -103,7 +103,7 @@ class wifiWindows(Thread):
                 if host is not None:
                     return (host, self.port)
             print("...Retry connecting:", i + 1)
-        if any(sub in self.__iface.name() for sub in ["USB", "usb"]):
+        if "usb" in self.__iface.name().lower():
             self.__iface.remove_all_network_profiles()
             self.__iface.disconnect()
         warn = "Wi-Fi connection failed, please retry.\nFor encrypted device, connect through system wifi setting first."
