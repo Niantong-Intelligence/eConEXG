@@ -521,6 +521,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#0113" class="md-nav__link">
+    <span class="md-ellipsis">
+      0.1.13
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#0112" class="md-nav__link">
     <span class="md-ellipsis">
       0.1.12
@@ -591,6 +600,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#0113" class="md-nav__link">
+    <span class="md-ellipsis">
+      0.1.13
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#0112" class="md-nav__link">
     <span class="md-ellipsis">
       0.1.12
@@ -648,30 +666,50 @@
 <p>Here you can find all the released changes to eConEXG.</p>
 <!-- BEGIN INCLUDE ../CHANGELOG.md '&lt;!-- released start --&gt;' '' -->
 
+<h2 id="0113">0.1.13</h2>
+<p>Released on 2024-08-01.
+* <strong>Add</strong> <code>get_dev_info()</code> in <code>iFocus</code> class to get device information.
+* <strong>Add</strong> selectable <code>500Hz</code> eeg and corresponding <code>100Hz</code> IMU sampling rate in <code>iFocus</code> class through <code>set_frequency()</code>.
+* <strong>Add</strong> <code>with_q = False</code> option in <code>iRecorder</code> and <code>iFocus</code> constructor to drop the necessity of loop calling <code>get_data()</code> in SIGNAL mode.
+* <strong>Add</strong> <code>__version__</code> field of eConEXG package to check the package version, it can be accessed throught <code>eConEXG.__version__</code>.</p>
+<!-- * **Add** `set_callback_handler()` method in `iRecorder` to allow user-defined callback function to be called when device connection lost. -->
+
+<hr />
+<ul>
+<li><strong>Fix</strong>  last valid packet number in <code>iFocus</code> warning message wrongly displayed as a fixed number issue.</li>
+<li><strong>Change</strong> the default data parse length from 0.01 seconds to 10 frames in <code>iRecorder</code> to match hardware settings.</li>
+<li><strong>Improvement</strong> on the aesthetics of a document interface.</li>
+</ul>
 <h2 id="0112">0.1.12</h2>
 <p>Released on 2024-07-25.</p>
+<hr />
 <ul>
-<li>Fix equipment format warning issue on bdf save.</li>
-<li>Rounding physical_max value of bdf file，resulting to more accurate data precision.</li>
-<li>Fix <code>sendMarker</code> not working in <code>triggerBox</code> under python3.11.</li>
+<li><strong>Fix</strong> equipment format warning issue on bdf save.</li>
+<li><strong>Fix</strong> Rounding physical_max value of bdf file，resulting to more accurate data precision.</li>
+<li><strong>Fix</strong> <code>sendMarker()</code> function not working in <code>triggerBox</code> class when python version&lt;3.11.</li>
 </ul>
 <h2 id="0111">0.1.11</h2>
 <p>Released on 2024-07-12.</p>
+<hr />
 <ul>
-<li>Update documentation homepage.</li>
+<li><strong>Update</strong> documentation homepage.</li>
 </ul>
 <h2 id="0110">0.1.10</h2>
 <p>Released on 2024-07-08.</p>
 <ul>
-<li>Add support for iRecorder 16-channel wired mode.</li>
-<li>change default timeout of get_data() to 0.02s.</li>
-<li>Add lsl support for iFocus. </li>
+<li><strong>Add</strong> lsl support for iFocus. </li>
+<li><strong>Add</strong> support for iRecorder 16-channel wired mode.</li>
+</ul>
+<hr />
+<ul>
+<li><strong>Change</strong> default timeout of <code>get_data()</code> function in <code>iRecorder</code> from <code>None</code> to <code>0.02</code>.</li>
 </ul>
 <h2 id="0109">0.1.09</h2>
 <p>Released on 2024-06-28.</p>
 <ul>
-<li>Add support for iRecorder 8-channel wired mode.</li>
+<li><strong>Add</strong> support for iRecorder 8-channel wired mode.</li>
 </ul>
+<hr />
 <!-- END INCLUDE -->
 
 

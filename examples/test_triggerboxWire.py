@@ -2,8 +2,8 @@ from eConEXG import triggerBoxWired
 import time
 
 # data unit in seconds
-INTERVAL = 0.005  # marker interval
-DURATION = 100  # None for infinite loop
+INTERVAL = 0.05  # marker interval
+DURATION = 3000  # None for infinite loop
 
 dev = triggerBoxWired()
 
@@ -17,11 +17,18 @@ try:
         dev.sendMarker(1)
         _elapsed += INTERVAL
         _count += 1
+        if DURATION is None:
+            continue
         if time.perf_counter() - _start > DURATION:
             break
 except KeyboardInterrupt:
-    dev.close_dev()
+    pass
 except Exception as e:
     print(e)
 finally:
     print(f"\n>>>Total Markers: {_count}<<<")
+
+try:
+    dev.close_dev()
+except Exception:
+    pass

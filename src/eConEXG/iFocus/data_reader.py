@@ -7,6 +7,7 @@ from enum import Enum
 from .iFocusParser import Parser
 from .device_socket import sock
 import traceback
+from copy import deepcopy
 
 
 class iFocus(Thread):
@@ -27,18 +28,22 @@ class iFocus(Thread):
         "AdapterInfo": "Serial Port",
     }
 
-    def __init__(self, port: Optional[str] = None) -> None:
+    def __init__(self, port: Optional[str] = None, with_q: bool = True) -> None:
         """
         Args:
-            port: if not given, connect to the first available device
+            port: if not given, connect to the first available device.
         """
         super().__init__(daemon=True)
+        self.__status = iFocus.Dev.TERMINATE
+        self.with_q = with_q
         if port is None:
             port = iFocus.find_devs()[0]
         self.__save_data = Queue()
         self.__parser = Parser()
+        self._dev_args = deepcopy(iFocus._dev_args)
         self.dev = sock(port)
-        self.__socket_flag = 1
+        self.set_frequency()
+        self.__socket_flag = "Device not connected, please connect first."
         try:
             self.dev.connect_socket()
         except Exception as e:
@@ -47,11 +52,50 @@ class iFocus(Thread):
             finally:
                 raise e
         self.__status = iFocus.Dev.IDLE_START
-        self.__socket_flag = 0
+        self.__socket_flag = None
         self.__lsl_imu_flag = False
         self.__lsl_eeg_flag = False
         self._dev_args["name"] = port
         self.start()
+
+    def set_frequency(self, fs_eeg: int = None):
+        """
+        Change the sampling frequency of iFocus.
+
+        Args:
+            fs_eeg: sampling frequency of eeg data, should be 250 or 500,
+                fs_imu will be automatically set to 1/5 of fs_eeg.
+
+        Raises:
+            ValueError: if fs_eeg is not 250 or 500.
+            NotImplementedError: device firmware too old, not supporting 500Hz.
+        """
+        if self.__status == iFocus.Dev.SIGNAL:
+            raise Exception("Data acquisition already started, please stop first.")
+        if fs_eeg is None:
+            fs_eeg = self._dev_args["fs_eeg"]
+        if fs_eeg not in [250, 500]:
+            raise ValueError("fs_eeg should be 250 or 500")
+        self._dev_args["fs_eeg"] = fs_eeg
+        fs_imu = fs_eeg // 5
+        self._dev_args["fs_imu"] = fs_imu
+        if hasattr(self, "dev"):
+            self.dev.set_frequency(fs_eeg)
+
+    def get_dev_info(self) -> dict:
+        """
+        Get current device information, including device name, hardware channel number, acquired channels, sample frequency, etc.
+
+        Returns:
+            A dictionary containing device information, which includes:
+                `type`: hardware type;
+                `channel_eeg`: channel dictionary, including EEG channel index and name;
+                `channel_imu`: channel dictionary, including IMU channel index and name;
+                `AdapterInfo`: adapter used for connection;
+                `fs_eeg`: sample frequency of EEG in Hz;
+                `fs_imu`: sample frequency of IMU in Hz;
+        """
+        return deepcopy(self._dev_args)
 
     @staticmethod
     def find_devs() -> list:
@@ -85,8 +129,9 @@ class iFocus(Thread):
             - eeg: µV
             - imu: degree(°)
         """
-        if self.__socket_flag:
-            self.__raise_sock_error()
+        self.__check_dev_status()
+        if not self.with_q:
+            return
         try:
             data: list = self.__save_data.get(timeout=timeout)
         except queue.Empty:
@@ -99,27 +144,23 @@ class iFocus(Thread):
         """
         Send data acquisition command to device, block until data acquisition started or failed.
         """
-        if self.__status == iFocus.Dev.TERMINATE:
-            self.__raise_sock_error()
+        self.__check_dev_status()
         if self.__status == iFocus.Dev.SIGNAL:
             return
         self.__status = iFocus.Dev.SIGNAL_START
         while self.__status not in [iFocus.Dev.SIGNAL, iFocus.Dev.TERMINATE]:
             time.sleep(0.01)
-        if self.__status != iFocus.Dev.SIGNAL:
-            self.__raise_sock_error()
+        self.__check_dev_status()
 
     def stop_acquisition(self) -> None:
         """
         Stop data or impedance acquisition, block until data acquisition stopped or failed.
         """
-        if self.__status == iFocus.Dev.TERMINATE:
-            self.__raise_sock_error()
+        self.__check_dev_status()
         self.__status = iFocus.Dev.IDLE_START
         while self.__status not in [iFocus.Dev.IDLE, iFocus.Dev.TERMINATE]:
             time.sleep(0.01)
-        if self.__status != iFocus.Dev.IDLE:
-            self.__raise_sock_error()
+        self.__check_dev_status()
 
     def open_lsl_eeg(self):
         """
@@ -203,11 +244,9 @@ class iFocus(Thread):
             self.dev.start_data()
             self.__status = iFocus.Dev.SIGNAL
         except Exception:
-            print("SIGNAL START FAILED!")
-            self.__socket_flag = 4
+            self.__socket_flag = "SIGNAL mode initialization failed."
             self.__status = iFocus.Dev.TERMINATE_START
 
-        print("SIGNAL START")
         while self.__status in [iFocus.Dev.SIGNAL]:
             try:
                 data = self.dev.recv_socket()
@@ -219,10 +258,11 @@ class iFocus(Thread):
                         )
                     if self.__lsl_imu_flag:
                         self._lsl_imu.push_chunk([frame[-1] for frame in ret])
-                    self.__save_data.put(ret)
+                    if self.with_q:
+                        self.__save_data.put(ret)
             except Exception:
                 traceback.print_exc()
-                self.__socket_flag = 3
+                self.__socket_flag = "Data transmission timeout."
                 self.__status = iFocus.Dev.TERMINATE_START
 
         # clear buffer
@@ -239,11 +279,10 @@ class iFocus(Thread):
                 self.dev.stop_recv()
             except Exception:
                 if self.__status == iFocus.Dev.IDLE_START:
-                    self.__socket_flag = 5
+                    self.__socket_flag = "Connection lost."
                 self.__status = iFocus.Dev.TERMINATE_START
 
     def run(self):
-        print("iFocus connected")
         while self.__status != iFocus.Dev.TERMINATE_START:
             if self.__status == iFocus.Dev.SIGNAL_START:
                 self.__recv_data()
@@ -252,28 +291,16 @@ class iFocus(Thread):
                 while self.__status == iFocus.Dev.IDLE:
                     time.sleep(0.1)
             else:
-                print(f"Unknown status: {self.__status}")
+                self.__socket_flag = f"Unknown status: {self.__status.name}"
                 break
         try:
             self.dev.close_socket()
-        except Exception:
-            print("socket close failed")
         finally:
             self.__status = iFocus.Dev.TERMINATE
-            print("iFocus disconnected")
 
-    def __raise_sock_error(self):
-        if self.__socket_flag == 0:
+    def __check_dev_status(self):
+        if self.__socket_flag is None:
             return
         if self.is_alive():
             self.close_dev()
-        if self.__socket_flag == 1:
-            raise Exception("Device not connected, please connect first.")
-        elif self.__socket_flag == 2:
-            raise Exception("Device connection failed.")
-        elif self.__socket_flag == 3:
-            raise Exception("Data transmission timeout.")
-        elif self.__socket_flag == 4:
-            raise Exception("Data/Impedance mode initialization failed.")
-        else:
-            raise Exception(f"Unknown error: {self.__socket_flag}")
+        raise Exception(str(self.__socket_flag))

@@ -14,7 +14,6 @@ class Parser:
 
     def __init__(self) -> None:
         self.__buffer = bytearray()
-        self.__pattern = re.compile(b"\xbb\xaa.{18}\xdd\xcc.{8}", flags=re.DOTALL)
         self.eeg_idx = [i + self._header for i in range(0, self._eegs, self._byts)]
         self.eeg_fall = self._header + self._eegs
         self.eeg_checksum = self.eeg_fall + 1
@@ -26,6 +25,10 @@ class Parser:
         self.imu_checksum = self.imu_start + self._imus
         self.imu_seq = self.imu_checksum + 1
         self._threshold = self.imu_seq + 1
+        self.__pattern = re.compile(
+            b"\xbb\xaa.{%d}\xdd\xcc.{8}" % (self._eegs + 3), flags=re.DOTALL
+        )
+
         self.clear_buffer()
 
     def clear_buffer(self):
@@ -59,13 +62,13 @@ class Parser:
             cur_num = frame[self.eeg_seq]
             if cur_num != ((self.eeg_last + 1) % 256):
                 self.__drop_eeg += 1
-                err = f">>>> EEG Pkt Los Cur:{cur_num} Last valid:{self.eeg_seq} buf len:{len(self.__buffer)} dropped: {self.__drop_eeg} times {datetime.now()}<<<<\n"
+                err = f">>>> EEG Pkt Los Cur:{cur_num} Last valid:{self.eeg_last} buf len:{len(self.__buffer)} dropped: {self.__drop_eeg} times {datetime.now()}<<<<\n"
                 print(err)
             self.eeg_last = cur_num
             cur_num = frame[self.imu_seq]
             if cur_num != ((self.imu_last + 1) % 256):
                 self.__drop_imu += 1
-                err = f">>>> IMU Pkt Los Cur:{cur_num} Last valid:{self.imu_seq} buf len:{len(self.__buffer)} dropped: {self.__drop_imu} times {datetime.now()}<<<<\n"
+                err = f">>>> IMU Pkt Los Cur:{cur_num} Last valid:{self.imu_last} buf len:{len(self.__buffer)} dropped: {self.__drop_imu} times {datetime.now()}<<<<\n"
                 print(err)
             self.imu_last = cur_num
 

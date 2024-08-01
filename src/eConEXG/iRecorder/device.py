@@ -1,10 +1,11 @@
 import queue
 import time
+from copy import deepcopy
 from enum import Enum
 from queue import Queue
 from threading import Thread
-from typing import Literal, Optional
-from datetime import datetime
+from typing import Callable, Literal, Optional
+
 from .data_parser import Parser
 from .physical_interface import get_interface, get_sock
 
@@ -20,10 +21,16 @@ class iRecorder(Thread):
         TERMINATE = 40  # Init state
         TERMINATE_START = 41
 
-    def __init__(self, dev_type: Literal["W8", "USB8", "W16", "USB16", "W32", "USB32"]):
+    def __init__(
+        self,
+        dev_type: Literal["W8", "USB8", "W16", "USB16", "W32", "USB32"],
+        with_q: bool = True,
+    ):
         """
         Args:
             dev_type: iRecorder device type.
+            with_q: if True, signal data will be stored in a queue and can be acquired by calling `get_data()` in a loop.
+                if False, new data will not be directly availabled and can only be acquired through `open_lsl_stream` and `save_bdf_file`.
 
         Raises:
             Exception: if device type not supported.
@@ -32,8 +39,10 @@ class iRecorder(Thread):
         if dev_type not in {"W8", "USB8", "W16", "USB16", "W32", "USB32"}:
             raise ValueError("Unsupported device type.")
         super().__init__(daemon=True, name=f"iRecorder {dev_type}")
+        self.with_q = with_q
+        self.handler = None
         self.__info_q = Queue(128)
-        self.__socket_flag = 1
+        self.__error_message = "Device not connected, please connect first."
         self.__save_data = Queue()
         self.__status = iRecorder.Dev.TERMINATE
         self.__lsl_flag = False
@@ -128,8 +137,6 @@ class iRecorder(Thread):
                 `fs`: sample frequency in Hz;
                 `ch_info`: channel dictionary, including channel index and name, can be altered by `update_channels()`.
         """
-        from copy import deepcopy
-
         return deepcopy(self.__dev_args)
 
     @staticmethod
@@ -173,23 +180,21 @@ class iRecorder(Thread):
             addr: device address.
 
         Raises:
-            Exception: if device already connected or connection failed.
+            Exception: if device already connected or connection establishment failed.
         """
         if self.is_alive():
             raise Exception("iRecorder already connected")
         try:
             ret = self.__interface.connect(addr)
             self.__dev_args.update({"name": addr, "sock": ret})
-            self.__dev_args.update({"_length": self.__parser._threshold})
+            self.__dev_args.update({"_length": self.__parser.packet_len})
             self.dev = self.__dev_sock(self.__dev_args)
             self.__parser.batt_val = self.dev.send_heartbeat()
-            self.__socket_flag = 0
-            self.__info_q.put(True)
+            self.__error_message = None
             self.__status = iRecorder.Dev.IDLE_START
             self.start()
         except Exception as e:
-            self.__info_q.put(str(e))
-            self.__socket_flag = 2
+            self.__error_message = "Device connection failed."
             self.__finish_search()
             raise e
 
@@ -223,22 +228,19 @@ class iRecorder(Thread):
         Raises:
             Exception: if device not connected or data acquisition init failed.
         """
-        if self.__status == iRecorder.Dev.TERMINATE:
-            self.__raise_sock_error()
+        self.__check_dev_status()
         if self.__status == iRecorder.Dev.SIGNAL:
-            return None
+            return
         if self.__status == iRecorder.Dev.IMPEDANCE:
             self.stop_acquisition()
         self.__status = iRecorder.Dev.SIGNAL_START
         while self.__status not in [iRecorder.Dev.SIGNAL, iRecorder.Dev.TERMINATE]:
             time.sleep(0.01)
-        if self.__status != iRecorder.Dev.SIGNAL:
-            self.__raise_sock_error()
-        return None
+        self.__check_dev_status()
 
     def get_data(self, timeout: Optional[float] = 0.02) -> list[Optional[list]]:
         """
-        Acquire amplifier data, make sure this function is called in a loop so that it can continuously read the data.
+        Acquire all available data, make sure this function is called in a loop when `with_q` is set to `True` in class constructor in case data queue is full.
 
         Args:
             timeout: Non-negative value, blocks at most `timeout` seconds and return, if set to `None`, blocks until new data is available.
@@ -254,8 +256,9 @@ class iRecorder(Thread):
         Raises:
             Exception: if device not connected or in data acquisition mode.
         """
-        if self.__socket_flag:
-            self.__raise_sock_error()
+        self.__check_dev_status()
+        if not self.with_q:
+            return
         if self.__status != iRecorder.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
         try:
@@ -273,14 +276,13 @@ class iRecorder(Thread):
         Raises:
             Exception: if device not connected or acquisition stop failed.
         """
-        if self.__status == iRecorder.Dev.TERMINATE:
-            self.__raise_sock_error()
+        self.__check_dev_status()
+        if self.__status == iRecorder.Dev.IDLE:
+            return
         self.__status = iRecorder.Dev.IDLE_START
         while self.__status not in [iRecorder.Dev.IDLE, iRecorder.Dev.TERMINATE]:
             time.sleep(0.01)
-        if self.__status != iRecorder.Dev.IDLE:
-            self.__raise_sock_error()
-        return None
+        self.__check_dev_status()
 
     def start_acquisition_impedance(self) -> None:
         """
@@ -289,22 +291,19 @@ class iRecorder(Thread):
         Raises:
             Exception: if device not connected or impedance acquisition init failed.
         """
-        if self.__status == iRecorder.Dev.TERMINATE:
-            self.__raise_sock_error()
+        self.__check_dev_status()
         if self.__status == iRecorder.Dev.IMPEDANCE:
-            return None
+            return
         if self.__status == iRecorder.Dev.SIGNAL:
             self.stop_acquisition()
         self.__status = iRecorder.Dev.IMPEDANCE_START
         while self.__status not in [iRecorder.Dev.IMPEDANCE, iRecorder.Dev.TERMINATE]:
             time.sleep(0.01)
-        if self.__status != iRecorder.Dev.IMPEDANCE:
-            self.__raise_sock_error()
-        return None
+        self.__check_dev_status()
 
     def get_impedance(self) -> Optional[list]:
         """
-        Acquire channel impedances, return immediatly, impedance update interval is about 2000ms.
+        Acquire channel impedances, return immediately, impedance update interval is about 2000ms.
 
         Returns:
             A list of channel impedance ranging from `0` to `np.inf` if available, otherwise `None`.
@@ -312,22 +311,18 @@ class iRecorder(Thread):
         Data Unit:
             - impedance: ohm (Ω)
         """
-        if self.__socket_flag:
-            if self.is_alive():
-                self.close_dev()
-            self.__raise_sock_error()
+        self.__check_dev_status()
         return self.__parser.impedance
 
     def close_dev(self) -> None:
         """
-        Close device connection and release resources.
+        Close device connection and release resources, resources are automatically released on device error.
         """
         if self.__status != iRecorder.Dev.TERMINATE:
             # ensure socket is closed correctly
             self.__status = iRecorder.Dev.TERMINATE_START
             while self.__status != iRecorder.Dev.TERMINATE:
                 time.sleep(0.01)
-        self.__finish_search()
         if self.is_alive():
             self.join()
 
@@ -358,7 +353,7 @@ class iRecorder(Thread):
         Raises:
             Exception: if data acquisition not started or LSL stream already opened.
             LSLException: if LSL stream creation failed.
-            importError: if `pylsl` is not installed or liblsl not installed for unix like system.
+            importError: if `pylsl` not installed or liblsl not installed on unix like system.
         """
         if self.__status != iRecorder.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
@@ -377,7 +372,7 @@ class iRecorder(Thread):
 
     def close_lsl_stream(self):
         """
-        Close LSL stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
+        Close LSL stream manually, invoked automatically after `stop_acquisition()` or `close_dev()`
         """
         self.__lsl_flag = False
         if hasattr(self, "_lsl_stream"):
@@ -385,7 +380,7 @@ class iRecorder(Thread):
 
     def save_bdf_file(self, filename: str):
         """
-        Save data to BDF file, can be invoked after `start_acquisition_data()`.
+        Save data to BDF file, it can be invoked after `start_acquisition_data()`.
 
         Args:
             filename: file name to save data, accept absolute or relative path.
@@ -413,7 +408,7 @@ class iRecorder(Thread):
 
     def close_bdf_file(self):
         """
-        Close and save BDF file manually, invoked automatically after `stop_acquisition()` and `close_dev()`
+        Close and save BDF file manually, invoked automatically after `stop_acquisition()` or `close_dev()`
         """
         self.__bdf_flag = False
         if hasattr(self, "_bdf_file"):
@@ -430,23 +425,21 @@ class iRecorder(Thread):
         if hasattr(self, "_bdf_file"):
             self._bdf_file.write_Annotation(marker)
 
-    def __raise_sock_error(self):
-        if self.__socket_flag == 0:
+    # def set_callback_handler(self, handler: Callable[[Optional[str]], None]):
+    #     """
+    #     Set callback handler function, invoked automatically when device thread ended if set.
+
+    #     Args:
+    #         handler: a callable function that takes a string of error message or `None` as input.
+    #     """
+    #     self.handler = handler
+
+    def __check_dev_status(self):
+        if self.__error_message is None:
             return
         if self.is_alive():
             self.close_dev()
-        if self.__socket_flag == 1:
-            raise Exception("Device not connected, please connect first.")
-        elif self.__socket_flag == 2:
-            raise Exception("Device connection failed.")
-        elif self.__socket_flag == 3:
-            raise Exception("Data transmission timeout.")
-        elif self.__socket_flag == 4:
-            raise Exception("Data/Impedance mode initialization failed.")
-        elif self.__socket_flag == 5:
-            raise Exception("Heartbeat package sent failed.")
-        else:
-            raise Exception(f"Unknown error: {self.__socket_flag}")
+        raise Exception(self.__error_message)
 
     def run(self):
         while self.__status not in [iRecorder.Dev.TERMINATE_START]:
@@ -457,15 +450,17 @@ class iRecorder(Thread):
             elif self.__status in [iRecorder.Dev.IDLE_START]:
                 self.__idle_state()
             else:
-                print(f"Unknown status: {self.__status}")
+                self.__error_message = f"Unknown status: {self.__status}"
                 break
         try:
             self.dev.close_socket()
         except Exception:
-            print("socket close failed")
+            pass
         finally:
+            self.__finish_search()
             self.__status = iRecorder.Dev.TERMINATE
-            print("iRecorder disconnected")
+        # if self.handler is not None:
+        #     self.handler(self.__error_message)
 
     def __recv_data(self, imp_mode=True):
         self.__parser.imp_flag = imp_mode
@@ -474,23 +469,24 @@ class iRecorder(Thread):
             if imp_mode:
                 self.dev.start_impe()
                 self.__status = iRecorder.Dev.IMPEDANCE
+                print("IMPEDANCE START")
             else:
                 self.dev.start_data()
                 self.__status = iRecorder.Dev.SIGNAL
+                print("SIGNAL START")
         except Exception:
-            print("IMPEDANCE/SIGNAL START FAILED!")
-            self.__socket_flag = 4
+            self.__error_message = "Data/Impedance mode initialization failed."
             self.__status = iRecorder.Dev.TERMINATE_START
-
-        print("IMPEDANCE/SIGNAL START")
+        # recv data
         while self.__status in [iRecorder.Dev.SIGNAL, iRecorder.Dev.IMPEDANCE]:
             try:
                 data = self.dev.recv_socket()
                 if not data:
-                    raise Exception("Remote transmission closed.")
+                    raise Exception("Remote end closed.")
                 ret = self.__parser.parse_data(data)
                 if ret:
-                    self.__save_data.put(ret)
+                    if self.with_q:
+                        self.__save_data.put(ret)
                     if self.__bdf_flag:
                         self._bdf_file.write_chunk(ret)
                     if self.__lsl_flag:
@@ -499,32 +495,28 @@ class iRecorder(Thread):
                 if (self.__dev_args["type"] == "W32") and (retry < 1):
                     try:
                         print("Wi-Fi reconnecting...")
-                        time.sleep(1)
                         self.dev.close_socket()
                         self.dev = self.__dev_sock(self.__dev_args, retry_timeout=3)
                         retry += 1
                         continue
                     except Exception:
                         print("Wi-Fi reconnection failed")
-                self.__socket_flag = 3
+                self.__error_message = "Data transmission timeout."
                 self.__status = iRecorder.Dev.TERMINATE_START
-
-        # clear buffer
+        # postprocess
         self.close_bdf_file()
         self.close_lsl_stream()
         self.__parser.clear_buffer()
-        self.__save_data.put(None)
-        while self.__save_data.get() is not None:
-            continue
+        while not self.__save_data.empty():
+            self.__save_data.get()
         # stop recv data
         if self.__status != iRecorder.Dev.TERMINATE_START:
             try:  # stop data acquisition when thread ended
                 self.dev.stop_recv()
             except Exception:
                 if self.__status == iRecorder.Dev.IDLE_START:
-                    self.__socket_flag = 5
+                    self.__error_message = "Device connection lost."
                 self.__status = iRecorder.Dev.TERMINATE_START
-        print(f"Data thread closed. {datetime.now()}")
 
     def __idle_state(self):
         timestamp = time.time()
@@ -538,8 +530,7 @@ class iRecorder(Thread):
                 timestamp = time.time()
                 # print("Ah, ah, ah, ah\nStayin' alive, stayin' alive")
             except Exception:
-                # traceback.print_exc()
-                self.__socket_flag = 5
+                self.__error_message = "Device connection lost."
                 self.__status = iRecorder.Dev.TERMINATE_START
 
     def __get_chs(self) -> int:
@@ -549,3 +540,5 @@ class iRecorder(Thread):
         if self.__interface.is_alive():
             self.__interface.stop()
             self.__interface.join()
+        while not self.__info_q.empty():
+            self.__info_q.get()

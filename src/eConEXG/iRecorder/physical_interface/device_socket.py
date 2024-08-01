@@ -7,7 +7,7 @@ class wifi_socket:
         from socket import socket, AF_INET, SOCK_STREAM
 
         self.__sock_args = sock_args
-        self.length = sock_args["_length"]
+        self.length = sock_args["_length"] * 10
         self.__socket = socket(AF_INET, SOCK_STREAM)
         self.__socket.settimeout(retry_timeout)
         self.__socket.connect(self.__sock_args["sock"])
@@ -47,7 +47,7 @@ class bluetooth_socket:
 
         self.delay = 0.2
         self.__sock_args = sock_args
-        self.length = sock_args["_length"]
+        self.length = sock_args["_length"] * 10
         self.__socket = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM)
         self.__socket.connect(self.__sock_args["sock"])
         self.__socket.settimeout(5)
@@ -104,7 +104,7 @@ class com_socket:
 
         self.command_wait = 0.05
         self.__sock_args = sock_args
-        self.length = sock_args["_length"]
+        self.length = sock_args["_length"] * 10
         self.__socket = Serial(timeout=5)
         self.__socket.port = self.__sock_args["sock"]
         self.__socket.open()
@@ -113,10 +113,13 @@ class com_socket:
         self.__socket.read_all()
 
     def close_socket(self):
-        self.__socket.write(self.cmd["R"])
-        # self.__socket.write(self.order['close'])
-        time.sleep(self.command_wait)
-        self.__socket.read_all()
+        try:
+            self.__socket.write(self.cmd["R"])
+            # self.__socket.write(self.order['close'])
+            time.sleep(self.command_wait)
+            self.__socket.read_all()
+        except Exception:
+            pass
         self.__socket.close()
         self.__socket = None
 
@@ -145,6 +148,6 @@ class com_socket:
         if not ret:
             raise Exception("Device not ready, please retry.")
         if len(ret) != ack + 1:
-            raise Exception("Invalid response format from battery query.")
+            raise Exception("Invalid response length from battery query.")
         battery = ret[-1]
         return battery

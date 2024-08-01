@@ -1,6 +1,8 @@
-# Welcome to eConEXG's documentation.
+# Welcome to eConEXG documentation page.
 
-For more infomation, please visit our [Github](https://github.com/Niantong-Intelligence/eConEXG) repository.
+eConEXG is a Python SDK for hardware made by [Niantong Intelligence](http://econtek.cn/).
+
+----
 
 {%
   include-markdown "../README.md"

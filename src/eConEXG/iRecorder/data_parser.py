@@ -10,7 +10,7 @@ class Parser:
     _trigger = -3
     _battery = -2
     _seq = -1
-    _threshold_ratio = 0.01
+    _threshold_ratio = 0.005
 
     def __init__(self, chs):
         self.chs = chs
@@ -25,6 +25,7 @@ class Parser:
         self._imp_factor = 1000 / 6 / (self._imp_len / 2) * np.pi / 4
         length = self.chs * self._byts + abs(self._checksum)
         self._threshold = int((self._start + length) * fs * self._threshold_ratio)
+        self.packet_len = int(self._start + length)
         self.clear_buffer()
 
     def clear_buffer(self):
