@@ -36,7 +36,7 @@ class Parser:
         self.__imp_idx = 0
         self.impedance = None
 
-    def update_chs(self, chs: list[int]):
+    def _update_chs(self, chs: list[int]):
         self.ch_idx = chs[:]
         self.impedance = None
 

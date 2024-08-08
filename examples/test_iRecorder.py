@@ -1,7 +1,7 @@
 from eConEXG import iRecorder
 import time
 
-dev = iRecorder(dev_type="W8")
+dev = iRecorder(dev_type="USB8")
 
 """query and set frequency, optional, if not set, the lowest available frequency will be used."""
 # print(dev.get_available_frequency())
@@ -25,10 +25,14 @@ while True:
 """Alternatively, one can query available devices in block mode and connect to the desired one."""
 # ret = dev.find_devs(duration=5)
 print(f"Devs: {ret}")
+"""Also, one can directly connect to the desired device by its name without calling `find_devs` first."""
 dev.connect_device(ret[0])
 
-dev.start_acquisition_data()
-# dev.save_bdf_file("test.bdf")
+"""Acquire data."""
+dev.start_acquisition_data(with_q=True)
+
+"""Create BDF file and open LSL stream."""
+# dev.create_bdf_file("test.bdf")
 # dev.open_lsl_stream()
 start = time.time()
 first_data = None
@@ -43,8 +47,9 @@ while time.time() - start < duration:
         count += 1
 print(f"average fs:{count/(time.time()-first_data)}")
 
+"""Stop acquisition, optional."""
 # dev.stop_acquisition()
-print()
+"""Acquire impedance."""
 dev.start_acquisition_impedance()
 start = time.time()
 while time.time() - start < duration:

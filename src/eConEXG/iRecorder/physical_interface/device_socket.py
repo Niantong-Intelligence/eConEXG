@@ -40,6 +40,9 @@ class wifi_socket:
         bettery = int.from_bytes(self.recv_socket(1), byteorder="big")
         return bettery
 
+    def set_fs(self, fs):
+        pass
+
 
 class bluetooth_socket:
     def __init__(self, sock_args) -> None:
@@ -84,6 +87,9 @@ class bluetooth_socket:
         bettery = int.from_bytes(self.recv_socket(1), byteorder="big")
         return bettery
 
+    def set_fs(self, fs):
+        pass
+
 
 class com_socket:
     cmd = {
@@ -117,7 +123,7 @@ class com_socket:
             self.__socket.write(self.cmd["R"])
             # self.__socket.write(self.order['close'])
             time.sleep(self.command_wait)
-            self.__socket.read_all()
+            self.__socket.flush()
         except Exception:
             pass
         self.__socket.close()
@@ -139,7 +145,7 @@ class com_socket:
     def stop_recv(self):
         self.__socket.write(self.cmd["R"])
         time.sleep(self.command_wait)
-        self.__socket.read_all()
+        self.__socket.flush()
 
     def send_heartbeat(self):
         ack = self.__socket.write(self.cmd["B"])
@@ -151,3 +157,8 @@ class com_socket:
             raise Exception("Invalid response length from battery query.")
         battery = ret[-1]
         return battery
+
+    def set_fs(self, fs):
+        ack = self.__socket.write(self.cmd[fs])
+        time.sleep(self.command_wait)
+        self.__socket.read(ack)

@@ -1,6 +1,6 @@
 # Welcome to eConEXG documentation page.
 
-eConEXG is a Python SDK for hardware made by [Niantong Intelligence](http://econtek.cn/).
+eConEXG is a Python SDK for hardwares made by [Niantong Intelligence](http://econtek.cn/).
 
 ----
 

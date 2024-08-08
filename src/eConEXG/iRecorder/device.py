@@ -4,7 +4,7 @@ from copy import deepcopy
 from enum import Enum
 from queue import Queue
 from threading import Thread
-from typing import Callable, Literal, Optional
+from typing import Literal, Optional
 
 from .data_parser import Parser
 from .physical_interface import get_interface, get_sock
@@ -24,13 +24,11 @@ class iRecorder(Thread):
     def __init__(
         self,
         dev_type: Literal["W8", "USB8", "W16", "USB16", "W32", "USB32"],
-        with_q: bool = True,
     ):
         """
         Args:
             dev_type: iRecorder device type.
-            with_q: if True, signal data will be stored in a queue and can be acquired by calling `get_data()` in a loop.
-                if False, new data will not be directly availabled and can only be acquired through `open_lsl_stream` and `save_bdf_file`.
+
 
         Raises:
             Exception: if device type not supported.
@@ -39,9 +37,9 @@ class iRecorder(Thread):
         if dev_type not in {"W8", "USB8", "W16", "USB16", "W32", "USB32"}:
             raise ValueError("Unsupported device type.")
         super().__init__(daemon=True, name=f"iRecorder {dev_type}")
-        self.with_q = with_q
         self.handler = None
         self.__info_q = Queue(128)
+        self.__with_q = True
         self.__error_message = "Device not connected, please connect first."
         self.__save_data = Queue()
         self.__status = iRecorder.Dev.TERMINATE
@@ -159,9 +157,13 @@ class iRecorder(Thread):
 
         Raises:
             Exception: Device is already connected.
+
+        New in:
+            - now you can set the sample frequency after device connection.
         """
-        if self.is_alive():
-            raise Exception("Set frequency failed, device already connected.")
+        if self.__status not in [iRecorder.Dev.IDLE, iRecorder.Dev.TERMINATE]:
+            warn = "Device acquisition in progress, please `stop_acquisition()` first."
+            raise Exception(warn)
         available = self.get_available_frequency(self.__dev_args["type"])
         default = available[0]
         if fs is None:
@@ -171,6 +173,8 @@ class iRecorder(Thread):
             fs = default
         self.__dev_args.update({"fs": fs})
         self.__parser._update_fs(fs)
+        if hasattr(self, "dev"):
+            self.dev.set_fs(fs)
 
     def connect_device(self, addr: str) -> None:
         """
@@ -200,35 +204,39 @@ class iRecorder(Thread):
 
     def update_channels(self, channels: Optional[dict] = None):
         """
-        update channel information, valid only when device is not acquiring data or impedance.
+        Update channels to acquire, invoke this method when device is not acquiring data or impedance.
 
         Args:
-            channels: channel number and name mapping, e.g. {0: "FPz", 1: "Oz", 2: "CPz"},
+            channels: channel number and name mapping, e.g. `{0: "FPz", 1: "Oz", 2: "CPz"}`,
                 if `None` is given, reset to all available channels with default names.
 
         Raises:
             Exception: if data/impedance acquisition in progress.
         """
         if self.__status not in [iRecorder.Dev.IDLE, iRecorder.Dev.TERMINATE]:
-            raise Exception(
-                "Device acquisition in progress, please `stop_acquisition` first."
-            )
+            warn = "Device acquisition in progress, please stop_acquisition() first."
+            raise Exception(warn)
         if channels is None:
             from .default_config import getChannels
 
             channels = getChannels(self.__dev_args["channel"])
         self.__dev_args.update({"ch_info": channels})
         ch_idx = [i for i in channels.keys()]
-        self.__parser.update_chs(ch_idx)
+        self.__parser._update_chs(ch_idx)
 
-    def start_acquisition_data(self):
+    def start_acquisition_data(self, with_q: bool = True):
         """
         Send data acquisition command to device, block until data acquisition started or failed.
+
+        Args:
+            with_q: if True, signal data will be stored in a queue and **should** be acquired by calling `get_data()` in a loop in case data queue is full.
+                if False, new data will not be directly availabled and can only be acquired through `open_lsl_stream` and `save_bdf_file`.
 
         Raises:
             Exception: if device not connected or data acquisition init failed.
         """
         self.__check_dev_status()
+        self.__with_q = with_q
         if self.__status == iRecorder.Dev.SIGNAL:
             return
         if self.__status == iRecorder.Dev.IMPEDANCE:
@@ -240,7 +248,7 @@ class iRecorder(Thread):
 
     def get_data(self, timeout: Optional[float] = 0.02) -> list[Optional[list]]:
         """
-        Acquire all available data, make sure this function is called in a loop when `with_q` is set to `True` in class constructor in case data queue is full.
+        Acquire all available data, make sure this function is called in a loop when `with_q` is set to `True` in`start_acquisition_data()`
 
         Args:
             timeout: Non-negative value, blocks at most `timeout` seconds and return, if set to `None`, blocks until new data is available.
@@ -257,7 +265,7 @@ class iRecorder(Thread):
             Exception: if device not connected or in data acquisition mode.
         """
         self.__check_dev_status()
-        if not self.with_q:
+        if not self.__with_q:
             return
         if self.__status != iRecorder.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
@@ -379,8 +387,15 @@ class iRecorder(Thread):
             del self._lsl_stream
 
     def save_bdf_file(self, filename: str):
+        """'save_bdf_file() will be deprecated in the future, use create_bdf_file() instead.'"""
+        print(
+            "WARNING: save_bdf_file() will be deprecated in the future, use create_bdf_file() instead."
+        )
+        self.create_bdf_file(filename)
+
+    def create_bdf_file(self, filename: str):
         """
-        Save data to BDF file, it can be invoked after `start_acquisition_data()`.
+        Create a BDF file and save data to it, invoke it after `start_acquisition_data()`.
 
         Args:
             filename: file name to save data, accept absolute or relative path.
@@ -417,7 +432,7 @@ class iRecorder(Thread):
 
     def send_bdf_marker(self, marker: str):
         """
-        Send marker to BDF file, can be invoked after `open_bdf_file()`, otherwise it will be ignored.
+        Send marker to BDF file, can be invoked after `create_bdf_file()`, otherwise it will be ignored.
 
         Args:
             marker: marker string to write.
@@ -485,7 +500,7 @@ class iRecorder(Thread):
                     raise Exception("Remote end closed.")
                 ret = self.__parser.parse_data(data)
                 if ret:
-                    if self.with_q:
+                    if self.__with_q:
                         self.__save_data.put(ret)
                     if self.__bdf_flag:
                         self._bdf_file.write_chunk(ret)

@@ -3,20 +3,35 @@
 This file contains tracks the changes landing in eConEXG. 
 <!-- released start -->
 
+## 0.1.14
+
+Released on 2024-08-08.
+
+<!-- * **Add** `set_callback_handler()` method in `iRecorder` to allow user-defined callback function to be called when device connection lost. -->
+
+* **Update** pyEDFlib dependency requirement in `pyproject.toml` from `0.1.37` to `0.1.38` to support `numpy>=2.0.0`.
+* **Optimize** `set_frequency()` in `iRecorder`, now you can set sample rate after device connection.
+
+---
+
+* **Fix** `iFocus` not raise Exception after lost connection with USBadapter.
+* **Change** `with_q` argument in `iRecorder` and `iFocus` from constructor to `start_acquisition_data()`.
+* **Deprecate** `save_bdf_file()` in `iRecorder`, use `create_bdf_file()` instead.
+
 ## 0.1.13
 
 Released on 2024-08-01.
+
 * **Add** `get_dev_info()` in `iFocus` class to get device information.
 * **Add** selectable `500Hz` eeg and corresponding `100Hz` IMU sampling rate in `iFocus` class through `set_frequency()`.
 * **Add** `with_q = False` option in `iRecorder` and `iFocus` constructor to drop the necessity of loop calling `get_data()` in SIGNAL mode.
 * **Add** `__version__` field of eConEXG package to check the package version, it can be accessed throught `eConEXG.__version__`.
-<!-- * **Add** `set_callback_handler()` method in `iRecorder` to allow user-defined callback function to be called when device connection lost. -->
 
 ---
 
 * **Fix**  last valid packet number in `iFocus` warning message wrongly displayed as a fixed number issue.
 * **Change** the default data parse length from 0.01 seconds to 10 frames in `iRecorder` to match hardware settings.
-* **Improvement** on the aesthetics of a document interface.
+* **Improve** the aesthetics of a document interface.
 
 ## 0.1.12
 
@@ -33,7 +48,6 @@ Released on 2024-07-25.
 Released on 2024-07-12.
 
 ---
-
 
 * **Update** documentation homepage.
 

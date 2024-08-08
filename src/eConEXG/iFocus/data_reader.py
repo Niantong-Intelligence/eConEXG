@@ -28,17 +28,17 @@ class iFocus(Thread):
         "AdapterInfo": "Serial Port",
     }
 
-    def __init__(self, port: Optional[str] = None, with_q: bool = True) -> None:
+    def __init__(self, port: Optional[str] = None) -> None:
         """
         Args:
             port: if not given, connect to the first available device.
         """
         super().__init__(daemon=True)
         self.__status = iFocus.Dev.TERMINATE
-        self.with_q = with_q
         if port is None:
             port = iFocus.find_devs()[0]
         self.__save_data = Queue()
+        self.__with_q = True
         self.__parser = Parser()
         self._dev_args = deepcopy(iFocus._dev_args)
         self.dev = sock(port)
@@ -112,7 +112,7 @@ class iFocus(Thread):
 
     def get_data(self, timeout: Optional[float] = 0.02) -> list[Optional[list]]:
         """
-        Acquire iFocus data, make sure this function is called in a loop so that it can continuously read the data.
+        Acquire all available data, make sure this function is called in a loop when `with_q` is set to `True` in`start_acquisition_data()`
 
         Args:
             timeout: Non-negative value, blocks at most 'timeout' seconds and return, if set to `None`, blocks until new data available.
@@ -130,7 +130,7 @@ class iFocus(Thread):
             - imu: degree(°)
         """
         self.__check_dev_status()
-        if not self.with_q:
+        if not self.__with_q:
             return
         try:
             data: list = self.__save_data.get(timeout=timeout)
@@ -140,11 +140,17 @@ class iFocus(Thread):
             data.extend(self.__save_data.get())
         return data
 
-    def start_acquisition_data(self) -> None:
+    def start_acquisition_data(self, with_q: bool = True) -> None:
         """
         Send data acquisition command to device, block until data acquisition started or failed.
+
+        Args:
+            with_q: if True, signal data will be stored in a queue and **should** be acquired by calling `get_data()` in a loop in case data queue is full.
+                if False, new data will not be directly availabled and can only be acquired through lsl stream.
+
         """
         self.__check_dev_status()
+        self.__with_q = with_q
         if self.__status == iFocus.Dev.SIGNAL:
             return
         self.__status = iFocus.Dev.SIGNAL_START
@@ -250,6 +256,8 @@ class iFocus(Thread):
         while self.__status in [iFocus.Dev.SIGNAL]:
             try:
                 data = self.dev.recv_socket()
+                if not data:
+                    raise Exception("Data transmission timeout.")
                 ret = self.__parser.parse_data(data)
                 if ret:
                     if self.__lsl_eeg_flag:
@@ -258,7 +266,7 @@ class iFocus(Thread):
                         )
                     if self.__lsl_imu_flag:
                         self._lsl_imu.push_chunk([frame[-1] for frame in ret])
-                    if self.with_q:
+                    if self.__with_q:
                         self.__save_data.put(ret)
             except Exception:
                 traceback.print_exc()

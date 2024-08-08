@@ -30,7 +30,7 @@ Documentation = "https://niantong-intelligence.github.io/eConEXG/"
 Changelog = "https://niantong-intelligence.github.io/eConEXG/changelog/"
 
 [project.optional-dependencies]
-bdf = ["pyEDFlib>=0.1.37"]
+bdf = ["pyEDFlib>=0.1.38"]
 lsl = ["pylsl>=1.16.2"]
 wifi = [
   "netifaces;platform_system=='Windows'",

@@ -2,9 +2,12 @@
 ## SDK for Niantong devices.
 
 [![PyPI version](https://img.shields.io/pypi/v/econexg.svg)](https://pypi.org/project/econexg/)
+[![PyPI Downloads](https://img.shields.io/pypi/dm/econexg.svg?label=Downloads)](
+https://pypi.org/project/econexg/)
 [![image](https://img.shields.io/pypi/l/econexg.svg)](https://github.com/niantong-intelligence/econexg/blob/main/LICENSE)
 [![Rye](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/rye/main/artwork/badge.json)](https://rye.astral.sh/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
 <!-- [![image](https://img.shields.io/pypi/pyversions/econexg.svg)](https://pypi.python.org/pypi/econexg) -->
 
 For more information, see the online [documentation](https://niantong-intelligence.github.io/eConEXG/).
