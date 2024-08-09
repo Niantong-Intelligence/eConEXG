@@ -38,6 +38,8 @@ wifi = [
   "netifaces2;platform_system=='Linux'",
   "pywifi>=1.1.12;platform_system=='Windows'",
   "comtypes;platform_system=='Windows'",
+  "pyobjc-framework-CoreWLAN;platform_system=='Darwin'",
+  "pyobjc-framework-CoreLocation;platform_system=='Darwin'",
 ]
 
 [build-system]

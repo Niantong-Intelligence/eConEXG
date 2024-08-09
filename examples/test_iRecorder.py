@@ -1,33 +1,36 @@
 from eConEXG import iRecorder
 import time
 
-dev = iRecorder(dev_type="USB8")
+dev_type = "W32"
+dev = iRecorder(dev_type=dev_type)
 
 """query and set frequency, optional, if not set, the lowest available frequency will be used."""
-# print(dev.get_available_frequency())
+print(dev.get_available_frequency(dev_type))
 # dev.set_frequency(500)
 
 print(dev.get_dev_info())
 
-"""query available devices continously"""
+"""query available devices asynchronously """
 # dev.find_devs()
-# # `do other things`
+# """Open another thread to query available devices"""
 # available_devs = []
 # while True:
 #     available_devs.extend(dev.get_devs())
-# #     `connect to the desired one`
+#     """break and connect to the desired one"""
+
+"""Alternatively, one can query available devices in block mode and connect to the desired one."""
+# ret = dev.find_devs(duration=5)
+
 dev.find_devs()
 while True:
     ret = dev.get_devs()
     if ret:
         break
-
-"""Alternatively, one can query available devices in block mode and connect to the desired one."""
-# ret = dev.find_devs(duration=5)
 print(f"Devs: {ret}")
-"""Also, one can directly connect to the desired device by its name without calling `find_devs` first."""
 dev.connect_device(ret[0])
 
+"""Also, one can directly connect to the desired device by its name without calling `find_devs` first."""
+# dev.connect_device('iRe-E4A793')
 """Acquire data."""
 dev.start_acquisition_data(with_q=True)
 
