@@ -3,12 +3,12 @@ import time
 
 dev_type = "W32"
 dev = iRecorder(dev_type=dev_type)
+print(dev.get_dev_info())
 
 """query and set frequency, optional, if not set, the lowest available frequency will be used."""
-print(dev.get_available_frequency(dev_type))
+# print(iRecorder.get_available_frequency(dev_type))
 # dev.set_frequency(500)
 
-print(dev.get_dev_info())
 
 """query available devices asynchronously """
 # dev.find_devs()

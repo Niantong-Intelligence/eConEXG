@@ -14,11 +14,11 @@ class wifiWindows(Thread):
         self.device_queue = device_queue
         self.port = 4321
         self.__search_flag = True
-        self.__interface = self.validate_interface()
+        self.__iface = self.validate_interface()
 
     @property
     def interface(self):
-        return self.__interface
+        return str(self.__iface.name())
 
     def validate_interface(self):
         wifi = pywifi.PyWiFi()
@@ -29,13 +29,12 @@ class wifiWindows(Thread):
         if interface is None:
             warn = "Wi-Fi interface not found, please insert a USB interface card."
             raise Exception(warn)
-        self.__iface = interface
         try:
-            self.__iface.scan_results()
+            interface.scan_results()
         except Exception:
             warn = "Wi-Fi interface disabled, please enable it in system setting."
             raise Exception(warn)
-        return str(self.__iface.name())
+        return interface
 
     def run(self):
         added_devices = set()
@@ -56,11 +55,19 @@ class wifiWindows(Thread):
                     added_devices.add(device.ssid)
                     self.device_queue.put([device.ssid, device.bssid[:-1], device.ssid])
 
-    def _get_default_gateway(self):  # TODO: some problems under multiple interfaces
-        gateways = netifaces.gateways()
-        for ips in gateways[netifaces.AF_INET]:
-            if ips[1] == str(self.__iface._raw_obj["guid"]):
-                return ips[0]
+    def _get_default_gateway(
+        self, timeout=2
+    ):  # TODO: some problems under multiple interfaces
+        start = time.time()
+        while time.time() - start < timeout:
+            gateways = netifaces.gateways()
+        try:
+            for ips in gateways[netifaces.AF_INET]:
+                if ips[1] == str(self.__iface._raw_obj["guid"]):
+                    return ips[0]
+        except Exception:
+            pass
+        return None
 
     def _get_connected_wifi_name(self):
         iface = str(self.__iface._raw_obj["guid"])[1:-1]
@@ -77,7 +84,6 @@ class wifiWindows(Thread):
                             return line.split(":")[1].strip()
         except subprocess.CalledProcessError:
             print_exc()
-            return None
         return None
 
     def stop(self):
@@ -86,7 +92,7 @@ class wifiWindows(Thread):
     def connect(self, ssid):
         self.stop()
         if self._get_connected_wifi_name() == ssid:  # return if connected
-            host = self._get_default_gateway()
+            host = self._get_default_gateway(timeout=1)
             if host is not None:
                 return (host, self.port)
         self.__iface.disconnect()
@@ -99,7 +105,7 @@ class wifiWindows(Thread):
             time.sleep(0.5 * (i + 1))
             if self.__iface.status() == pywifi.const.IFACE_CONNECTED:
                 time.sleep(1)
-                host = self._get_default_gateway()
+                host = self._get_default_gateway(timeout=2)
                 if host is not None:
                     return (host, self.port)
             print("...Retry connecting:", i + 1)

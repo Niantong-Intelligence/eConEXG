@@ -30,10 +30,9 @@ class wifiMACOS(Thread):
         start = time.time()
         while time.time() - start < timeout:
             gateways = netifaces.gateways()
-            try:
-                for ips in gateways[netifaces.AF_INET]:  # TODO: KeyError: 2
+            try:  # avoid KeyError: 2
+                for ips in gateways[netifaces.AF_INET]:
                     if ips[1] == self.interface:
-                        print(f"check{ips[0]}")
                         return ips[0]
             except Exception:
                 pass
@@ -46,32 +45,35 @@ class wifiMACOS(Thread):
         # location_manager.requestAlwaysAuthorization()
         location_manager.requestWhenInUseAuthorization()
         location_manager.startUpdatingLocation()
-        max_wait = 10
+        max_wait = 12
         for _ in range(1, max_wait):
             authorization_status = location_manager.authorizationStatus()
             if authorization_status == 3 or authorization_status == 4:
                 return
             time.sleep(1)
         else:
-            return "Unable to obtain authorisation"
+            return "Unable to obtain Location service authorization."
 
     def run(self):
         ret = self.__request_location()
         if ret is not None:
-            self.device_queue.put(f"Error during scanning: {ret}")
+            self.device_queue.put(f"Error: {ret}")
             return
         added_devices = set()
         while self.__search_flag:
             output, error = self.__interface.scanForNetworksWithName_error_(None, None)
             if error is not None:
+                if "busy" in str(error).lower():
+                    time.sleep(1)
+                    continue
                 self.device_queue.put(f"Error during scanning: {error}")
                 return
             if output is None:
                 self.device_queue.put("Failed to scan WiFi devices.")
                 return
             for network in output:
-                ssid = network.ssid()  # 1:bssid, 2:rssi
-                if "iRe" not in str(ssid):
+                ssid = str(network.ssid())
+                if "iRe" not in ssid:
                     continue
                 if ssid not in added_devices:
                     added_devices.add(ssid)
@@ -88,7 +90,7 @@ class wifiMACOS(Thread):
         result = result.decode(locale.getpreferredencoding()).split(":")
         if len(result) > 1:
             if result[1].strip() == ssid:
-                host = self._get_default_gateway()
+                host = self._get_default_gateway(timeout=1)
                 if host:
                     return (host, self.port)
         # connect
@@ -98,10 +100,17 @@ class wifiMACOS(Thread):
         # process.wait()
         result = out.decode(locale.getpreferredencoding())
         if not result:
-            host = self._get_default_gateway()
+            host = self._get_default_gateway(timeout=2)
             if host:
                 return (host, self.port)
         else:
             warn = "Wi-Fi connection failed, please retry.\nFor encrypted device, connect through system setting first."
             raise Exception(warn)
 
+if __name__ == '__main__':
+    q = Queue()
+    wifi = wifiMACOS(q)
+    wifi.start()
+    while True:
+        if not q.empty():
+            print(q.get())
