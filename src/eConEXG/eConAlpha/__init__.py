@@ -1,3 +1,3 @@
-from .data_reader import iArmBand
+__all__ = ["eConAlpha"]
 
-__all__ = ["iArmBand"]
+from .data_reader import eConAlpha

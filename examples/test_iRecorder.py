@@ -1,7 +1,7 @@
 from eConEXG import iRecorder
 import time
 
-dev_type = "W32"
+dev_type = "W16"
 dev = iRecorder(dev_type=dev_type)
 print(dev.get_dev_info())
 

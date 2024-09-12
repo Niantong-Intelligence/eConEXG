@@ -1,221 +1,331 @@
-import queue
 import time
+import queue
+from queue import Queue
+from threading import Thread
+from typing import Optional
+from enum import Enum
+from .data_parser import Parser
+from .device_socket import sock
 import traceback
-from multiprocessing import Process, Queue, Value
-
-from .device_socket import com_socket as device_socket
-
-CAP_SIGNAL = 10
-CAP_SIGNAL_START = 11
-CAP_IDLE = 30
-CAP_IDLE_START = 31
-CAP_END = 101
-CAP_TERMINATED = 102
+from copy import deepcopy
 
 
-class iArmBand(Process):
-    def __init__(self, port, socket_flag: Value, imu: bool = True, vib: bool = True):
-        print("initing iRecorder")
-        Process.__init__(self, daemon=True)
-        self.socket_flag = socket_flag
-        self.__raw_data = Queue(5000)
-        self.__cap_status = Value("i", CAP_TERMINATED)
-        self.__battery = Value("i", -1)
-        self.port = port
-        self.band = Value("i", 0)
-        self.imu = imu
-        self.vib = vib
+class eConAlpha(Thread):
+    class Dev(Enum):
+        SIGNAL = 10
+        SIGNAL_START = 11
+        IDLE = 30
+        IDLE_START = 31
+        TERMINATE = 40
+        TERMINATE_START = 41
 
-    def shock_band(self):
-        if self.vib:
-            self.band.value = 1
-        else:
-            pass
+    _dev_args = {
+        "type": "eConAlpha",
+        "fs_eeg": 500,
+        "fs_imu": 62.5,
+        "channel_eeg": {
+            0: "CH0",
+            1: "CH1",
+            2: "CH2",
+            3: "CH3",
+            4: "CH4",
+            5: "CH5",
+            6: "CH6",
+            7: "CH7",
+        },
+        "channel_imu": {
+            0: "ACC_X",
+            1: "ACC_Y",
+            2: "ACC_Z",
+            3: "GRY_X",
+            4: "GRY_Y",
+            5: "GRY_Z",
+        },
+        "AdapterInfo": "Serial Port",
+    }
+
+    def __init__(self, port: Optional[str] = None) -> None:
+        """
+        Args:
+            port: if not given, connect to the first available device.
+        """
+        super().__init__(daemon=True)
+        self.__status = eConAlpha.Dev.TERMINATE
+        if port is None:
+            port = eConAlpha.find_devs()[0]
+        self.__save_data = Queue()
+        self.__with_q = True
+        self.__parser = Parser()
+        self._dev_args = deepcopy(eConAlpha._dev_args)
+        self.dev = sock(port, self.__parser._threshold)
+        self.set_frequency()
+        self.__socket_flag = "Device not connected, please connect first."
+        try:
+            self.dev.connect_socket()
+        except Exception as e:
+            try:
+                self.dev.close_socket()
+            finally:
+                raise e
+        self.__status = eConAlpha.Dev.IDLE_START
+        self.__socket_flag = None
+        self.__lsl_imu_flag = False
+        self.__lsl_eeg_flag = False
+        self._dev_args["name"] = port
+        self.start()
+
+    def set_frequency(self, fs_eeg: Optional[int] = None):
+        """
+        Change the sampling frequency of iFocus.
+
+        Args:
+            fs_eeg: sampling frequency of eeg data, should be 250, 500, 1000 or 2000.
+                fs_imu will be automatically set to 1/8 of fs_eeg.
+
+        Raises:
+            ValueError: if fs_eeg is not valid.
+            NotImplementedError: device firmware too old, not supporting 500Hz.
+        """
+        if self.__status == eConAlpha.Dev.SIGNAL:
+            raise Exception("Data acquisition already started, please stop first.")
+        if fs_eeg is None:
+            fs_eeg = self._dev_args["fs_eeg"]
+        if fs_eeg not in [250, 500, 1000, 2000]:
+            raise ValueError("fs_eeg should be 250 or 500")
+        self._dev_args["fs_eeg"] = fs_eeg
+        fs_imu = fs_eeg / 8
+        self._dev_args["fs_imu"] = fs_imu
+        if hasattr(self, "dev"):
+            self.dev.set_frequency(fs_eeg)
+
+    def get_dev_info(self) -> dict:
+        """
+        Get current device information, including device name, hardware channel number, acquired channels, sample frequency, etc.
+
+        Returns:
+            A dictionary containing device information, which includes:
+                `type`: hardware type;
+                `channel_eeg`: channel dictionary, including EEG channel index and name;
+                `channel_imu`: channel dictionary, including IMU channel index and name;
+                `AdapterInfo`: adapter used for connection;
+                `fs_eeg`: sample frequency of EEG in Hz;
+                `fs_imu`: sample frequency of IMU in Hz;
+        """
+        return deepcopy(self._dev_args)
 
     @staticmethod
-    def get_device():
-        devices = device_socket.devce_list()
-        for device in devices:  # ECONEMGA for windows
-            if device.serial_number in ["ECONEMGA", "eConEMG"]:
-                try:
-                    conn = device_socket(device.device)
-                    conn.close_socket()
-                except Exception:
-                    continue
-                return device.device
-        return None
+    def find_devs() -> list:
+        """
+        Find available iFocus devices.
 
-    def start_acquisition_data(self):
-        if self.__cap_status.value == CAP_TERMINATED:
+        Returns:
+            available device ports.
+
+        Raises:
+            Exception: if no iFocus device found.
+        """
+        return sock._find_devs()
+
+    def get_data(self, timeout: Optional[float] = 0.02) -> list[Optional[list]]:
+        """
+        Acquire all available data, make sure this function is called in a loop when `with_q` is set to `True` in`start_acquisition_data()`
+
+        Args:
+            timeout: Non-negative value, blocks at most 'timeout' seconds and return, if set to `None`, blocks until new data available.
+
+        Returns:
+            A list of frames, each frame is made up of 5 eeg data and 1 imu data in a shape as below:
+                [[`emg_ch0_0,...,emg_ch8_0`],..., [`emg_ch0_7,...,emg_ch8_7`], [`acc_x`, `acc_y`, `acc_z`,`gry_x`,`gry_y`,`gry_z`]],
+                    in which number `0~4` after `_` indicates the time order of channel data.
+
+        Raises:
+            Exception: if device not connected, connection failed, data transmission timeout/init failed, or unknown error.
+
+        Data Unit:
+            - eeg: µV
+            - acc: mg
+            - gry: bps
+        """
+        self.__check_dev_status()
+        if not self.__with_q:
             return
-        self.__cap_status.value = CAP_SIGNAL_START
-        while self.__cap_status.value != CAP_SIGNAL:
-            continue
-
-    def get_data(self):
-        data = []
         try:
-            while not self.__raw_data.empty():
-                temp = self.__raw_data.get(block=False)
-                data.append(temp)
+            data: list = self.__save_data.get(timeout=timeout)
         except queue.Empty:
-            pass
+            return []
+        while not self.__save_data.empty():
+            data.extend(self.__save_data.get())
+        return data
+
+    def start_acquisition_data(self, with_q: bool = True) -> None:
+        """
+        Send data acquisition command to device, block until data acquisition started or failed.
+
+        Args:
+            with_q: if True, signal data will be stored in a queue and **should** be acquired by calling `get_data()` in a loop in case data queue is full.
+                if False, new data will not be directly availabled and can only be accessed through lsl stream.
+
+        """
+        self.__check_dev_status()
+        self.__with_q = with_q
+        if self.__status == eConAlpha.Dev.SIGNAL:
+            return
+        self.__status = eConAlpha.Dev.SIGNAL_START
+        while self.__status not in [eConAlpha.Dev.SIGNAL, eConAlpha.Dev.TERMINATE]:
+            time.sleep(0.01)
+        self.__check_dev_status()
+
+    def stop_acquisition(self) -> None:
+        """
+        Stop data or impedance acquisition, block until data acquisition stopped or failed.
+        """
+        self.__check_dev_status()
+        self.__status = eConAlpha.Dev.IDLE_START
+        while self.__status not in [eConAlpha.Dev.IDLE, eConAlpha.Dev.TERMINATE]:
+            time.sleep(0.01)
+        self.__check_dev_status()
+
+    def open_lsl_emg(self):
+        """
+        Open LSL EEG stream, can be invoked after `start_acquisition_data()`.
+
+        Raises:
+            Exception: if data acquisition not started or LSL stream already opened.
+            LSLException: if LSL stream creation failed.
+            importError: if `pylsl` is not installed or liblsl not installed for unix like system.
+        """
+        if self.__status != eConAlpha.Dev.SIGNAL:
+            raise Exception("Data acquisition not started, please start first.")
+        if hasattr(self, "_lsl_eeg"):
+            raise Exception("LSL stream already opened.")
+        from ..utils.lslWrapper import lslSender
+
+        self._lsl_eeg = lslSender(
+            self._dev_args["channel_eeg"],
+            f"{self._dev_args['type']}EMG{self._dev_args['name'][-2:]}",
+            "EMG",
+            self._dev_args["fs_eeg"],
+            with_trigger=False,
+        )
+        self.__lsl_eeg_flag = True
+
+    def close_lsl_eeg(self):
+        """
+        Close LSL EEG stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
+        """
+        self.__lsl_eeg_flag = False
+        if hasattr(self, "_lsl_eeg"):
+            del self._lsl_eeg
+
+    def open_lsl_imu(self):
+        """
+        Open LSL IMU stream, can be invoked after `start_acquisition_data()`.
+
+        Raises:
+            Exception: if data acquisition not started or LSL stream already opened.
+            LSLException: if LSL stream creation failed.
+            importError: if `pylsl` is not installed or liblsl not installed for unix like system.
+        """
+        if self.__status != eConAlpha.Dev.SIGNAL:
+            raise Exception("Data acquisition not started, please start first.")
+        if hasattr(self, "_lsl_imu"):
+            raise Exception("LSL stream already opened.")
+        from ..utils.lslWrapper import lslSender
+
+        self._lsl_imu = lslSender(
+            self._dev_args["channel_imu"],
+            f"{self._dev_args['type']}IMU{self._dev_args['name'][-2:]}",
+            "IMU",
+            self._dev_args["fs_imu"],
+            unit="degree",
+            with_trigger=False,
+        )
+        self.__lsl_imu_flag = True
+
+    def close_lsl_imu(self):
+        """
+        Close LSL IMU stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
+        """
+        self.__lsl_imu_flag = False
+        if hasattr(self, "_lsl_imu"):
+            del self._lsl_imu
+
+    def close_dev(self):
+        """
+        Close device connection and release resources.
+        """
+        if self.__status != eConAlpha.Dev.TERMINATE:
+            # ensure socket is closed correctly
+            self.__status = eConAlpha.Dev.TERMINATE_START
+            while self.__status != eConAlpha.Dev.TERMINATE:
+                time.sleep(0.1)
+        if self.is_alive():
+            self.join()
+
+    def __recv_data(self):
+        try:
+            self.dev.start_data()
+            self.__status = eConAlpha.Dev.SIGNAL
         except Exception:
-            traceback.print_exc()
-        return data  # (channels, length)
+            self.__socket_flag = "SIGNAL mode initialization failed."
+            self.__status = eConAlpha.Dev.TERMINATE_START
 
-    def stop_acquisition(self):
-        if self.__cap_status.value == CAP_TERMINATED:
-            return
-        self.__cap_status.value = CAP_IDLE_START
-        while self.__cap_status.value != CAP_IDLE:
-            continue
-
-    def close_cap(self):
-        if self.__cap_status.value == CAP_TERMINATED:
-            return
-        # ensure socket is closed correctly
-        self.__cap_status.value = CAP_END
-        while self.__cap_status.value != CAP_TERMINATED:
-            time.sleep(0.05)
-
-    def get_battery_value(self):
-        return self.__battery.value
-
-    def socket_recv(self):
-        while self.__run_flag:
-            if not self.__recv_run_flag:
-                time.sleep(0.2)
-                continue
+        while self.__status in [eConAlpha.Dev.SIGNAL]:
             try:
-                data = self.__socket.recv_socket()
-                if len(data) != 0:
-                    self.__recv_queue.put(data)
-                else:
-                    time.sleep(0.01)
+                data = self.dev.recv_socket()
+                if not data:
+                    raise Exception("Data transmission timeout.")
+                ret = self.__parser.parse_data(data)
+                if ret:
+                    if self.__lsl_eeg_flag:
+                        self._lsl_eeg.push_chunk(
+                            [frame for frames in ret for frame in frames[:-1]]
+                        )
+                    if self.__lsl_imu_flag:
+                        self._lsl_imu.push_chunk([frame[-1] for frame in ret])
+                    if self.__with_q:
+                        self.__save_data.put(ret)
             except Exception:
-                print("damn")
-                time.sleep(0.2)
                 traceback.print_exc()
+                self.__socket_flag = "Data transmission timeout."
+                self.__status = eConAlpha.Dev.TERMINATE_START
+
+        # clear buffer
+        self.close_lsl_eeg()
+        self.close_lsl_imu()
+        # self.dev.stop_recv()
+        self.__parser.clear_buffer()
+        self.__save_data.put(None)
+        while self.__save_data.get() is not None:
+            continue
+        # stop recv data
+        if self.__status != eConAlpha.Dev.TERMINATE_START:
+            try:  # stop data acquisition when thread ended
+                self.dev.stop_recv()
+            except Exception:
+                if self.__status == eConAlpha.Dev.IDLE_START:
+                    self.__socket_flag = "Connection lost."
+                self.__status = eConAlpha.Dev.TERMINATE_START
 
     def run(self):
-        print("port", self.port)
-        import threading
-
-        from .data_parser import Parser
-
-        self.socket_flag.value = 1
-        self.__socket = device_socket(self.port)
-        try:
-            self.__socket.connect_socket()
-            self.__socket.stop_recv()
-            self.__battery.value = self.__socket.send_heartbeat()
-        except Exception:
-            traceback.print_exc()
-            self.socket_flag.value = 4
-            self.__socket.close_socket()
-            return
-
-        print("cap socket connected!")
-        self.sys_data = 0
-        self.__timestamp = time.time()
-        self.__recv_queue = queue.Queue()
-        self.__cap_status.value = CAP_SIGNAL_START
-        self.__parser = Parser(self.imu)
-        self.__run_flag = True
-        self.__recv_run_flag = False
-        self.__recv_thread = threading.Thread(target=self.socket_recv, daemon=True)
-        self.__recv_thread.start()
-        self.socket_flag.value = 2
-        self.shock_band()
-        while True:
-            if self.__cap_status.value == CAP_SIGNAL_START:
-                print("CAP_SIGNAL_START")
-                self.__parser.clear_buffer()
-                while not self.__raw_data.empty():
-                    try:
-                        self.__raw_data.get(block=False)
-                    except queue.Empty:
-                        print("Process queue bug caught")
-                while not self.__recv_queue.empty():
-                    try:
-                        self.__recv_queue.get(block=False)
-                    except queue.Empty:
-                        print("Thread queue bug caught")
-                try:
-                    self.__recv_run_flag = True
-                    self.__socket.start_data(self.imu)
-                    self.__cap_status.value = CAP_SIGNAL
-                    self.__timestamp = time.time()
-                except Exception:
-                    traceback.print_exc()
-                    self.socket_flag.value = 6
-                    self.__cap_status.value = CAP_END
-            elif self.__cap_status.value == CAP_SIGNAL:
-                try:
-                    data = self.__recv_queue.get(timeout=0.02)
-                    data_list = self.__parser.parse_data(data)
-                    if len(data_list) < 1:
-                        continue
-                    # shock device if set
-                    if self.band.value == 1:
-                        self.__socket.shock()
-                        self.band.value = 0
-
-                    self.__timestamp = time.time()
-                    for data in data_list:
-                        data[Parser.HOTKEY_TRIGGER] = self.sys_data
-                        self.sys_data = 0
-                        self.__battery.value = data[Parser.BATTERY]
-                        self.__raw_data.put(
-                            data[0 : Parser.BATTERY], block=False
-                        )  # assure complete collection
-                except queue.Full:
-                    print(">>>queue full<<<")
-                    self.socket_flag.value = 9
-                    self.__cap_status.value = CAP_END
-                except Exception:
-                    if (time.time() - self.__timestamp) > 4:
-                        self.socket_flag.value = 3
-                        self.__cap_status.value = CAP_END
-
-            elif self.__cap_status.value == CAP_IDLE_START:
-                try:
-                    print("CAP_IDLE_START")
-                    print("DROPPED PACKETS COUNT:", self.__parser.packet_drop_count)
-                    self.__recv_run_flag = False
-                    self.__socket.stop_recv()
-                    self.__cap_status.value = CAP_IDLE
-                    self.__timestamp = time.time()
-                except Exception:
-                    traceback.print_exc()
-                    self.socket_flag.value = 6
-                    self.__cap_status.value = CAP_END
-            elif self.__cap_status.value == CAP_IDLE:
-                time.sleep(0.1)
-                if (time.time() - self.__timestamp) > 5:
-                    try:
-                        self.__battery.value = self.__socket.send_heartbeat()
-                        # heartbeat to keep socket alive
-                        self.__timestamp = time.time()
-                        print("Ah, ah, ah, ah\nStayin' alive, stayin' alive")
-                    except Exception:
-                        traceback.print_exc()
-                        self.socket_flag.value = 5
-                        self.__cap_status.value = CAP_END
-            elif self.__cap_status.value == CAP_END:
-                print("CAP_END")
-                self.__recv_run_flag = False
-                self.__run_flag = False
-                time.sleep(0.1)
-                self.__recv_thread.join(timeout=0)
-                try:
-                    self.__socket.stop_recv()
-                except Exception:
-                    traceback.print_exc()
-                self.__socket.close_socket()
-                self.__cap_status.value = CAP_TERMINATED
-                print("CAP_TERMINATED")
-                return
+        while self.__status != eConAlpha.Dev.TERMINATE_START:
+            if self.__status == eConAlpha.Dev.SIGNAL_START:
+                self.__recv_data()
+            elif self.__status == eConAlpha.Dev.IDLE_START:
+                self.__status = eConAlpha.Dev.IDLE
+                while self.__status == eConAlpha.Dev.IDLE:
+                    time.sleep(0.1)
             else:
-                print("shared value bug, but it's ok")
+                self.__socket_flag = f"Unknown status: {self.__status.name}"
+                break
+        try:
+            self.dev.close_socket()
+        finally:
+            self.__status = eConAlpha.Dev.TERMINATE
+
+    def __check_dev_status(self):
+        if self.__socket_flag is None:
+            return
+        if self.is_alive():
+            self.close_dev()
+        raise Exception(str(self.__socket_flag))
