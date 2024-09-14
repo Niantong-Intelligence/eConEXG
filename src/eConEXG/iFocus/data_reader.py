@@ -19,7 +19,7 @@ class iFocus(Thread):
         TERMINATE = 40
         TERMINATE_START = 41
 
-    _dev_args = {
+    dev_args = {
         "type": "iFocus",
         "fs_eeg": 250,
         "fs_imu": 50,
@@ -40,7 +40,7 @@ class iFocus(Thread):
         self.__save_data = Queue()
         self.__with_q = True
         self.__parser = Parser()
-        self._dev_args = deepcopy(iFocus._dev_args)
+        self.dev_args = deepcopy(iFocus.dev_args)
         self.dev = sock(port)
         self.set_frequency()
         self.__socket_flag = "Device not connected, please connect first."
@@ -55,7 +55,7 @@ class iFocus(Thread):
         self.__socket_flag = None
         self.__lsl_imu_flag = False
         self.__lsl_eeg_flag = False
-        self._dev_args["name"] = port
+        self.dev_args["name"] = port
         self.start()
 
     def set_frequency(self, fs_eeg: int = None):
@@ -73,12 +73,12 @@ class iFocus(Thread):
         if self.__status == iFocus.Dev.SIGNAL:
             raise Exception("Data acquisition already started, please stop first.")
         if fs_eeg is None:
-            fs_eeg = self._dev_args["fs_eeg"]
+            fs_eeg = self.dev_args["fs_eeg"]
         if fs_eeg not in [250, 500]:
             raise ValueError("fs_eeg should be 250 or 500")
-        self._dev_args["fs_eeg"] = fs_eeg
+        self.dev_args["fs_eeg"] = fs_eeg
         fs_imu = fs_eeg // 5
-        self._dev_args["fs_imu"] = fs_imu
+        self.dev_args["fs_imu"] = fs_imu
         if hasattr(self, "dev"):
             self.dev.set_frequency(fs_eeg)
 
@@ -95,7 +95,7 @@ class iFocus(Thread):
                 `fs_eeg`: sample frequency of EEG in Hz;
                 `fs_imu`: sample frequency of IMU in Hz;
         """
-        return deepcopy(self._dev_args)
+        return deepcopy(self.dev_args)
 
     @staticmethod
     def find_devs() -> list:
@@ -110,7 +110,7 @@ class iFocus(Thread):
         """
         return sock._find_devs()
 
-    def get_data(self, timeout: Optional[float] = 0.02) -> list[Optional[list]]:
+    def get_data(self, timeout: Optional[float] = 0.02) ->  Optional[list[Optional[list]]]:
         """
         Acquire all available data, make sure this function is called in a loop when `with_q` is set to `True` in`start_acquisition_data()`
 
@@ -146,7 +146,7 @@ class iFocus(Thread):
 
         Args:
             with_q: if True, signal data will be stored in a queue and **should** be acquired by calling `get_data()` in a loop in case data queue is full.
-                if False, new data will not be directly availabled and can only be acquired through lsl stream.
+                if False, new data will not be directly available and can only be acquired through lsl stream.
 
         """
         self.__check_dev_status()
@@ -184,10 +184,10 @@ class iFocus(Thread):
         from ..utils.lslWrapper import lslSender
 
         self._lsl_eeg = lslSender(
-            self._dev_args["channel_eeg"],
-            f"{self._dev_args['type']}EEG{self._dev_args['name'][-2:]}",
+            self.dev_args["channel_eeg"],
+            f"{self.dev_args['type']}EEG{self.dev_args['name'][-2:]}",
             "EEG",
-            self._dev_args["fs_eeg"],
+            self.dev_args["fs_eeg"],
             with_trigger=False,
         )
         self.__lsl_eeg_flag = True
@@ -216,10 +216,10 @@ class iFocus(Thread):
         from ..utils.lslWrapper import lslSender
 
         self._lsl_imu = lslSender(
-            self._dev_args["channel_imu"],
-            f"{self._dev_args['type']}IMU{self._dev_args['name'][-2:]}",
+            self.dev_args["channel_imu"],
+            f"{self.dev_args['type']}IMU{self.dev_args['name'][-2:]}",
             "IMU",
-            self._dev_args["fs_imu"],
+            self.dev_args["fs_imu"],
             unit="degree",
             with_trigger=False,
         )
@@ -232,6 +232,53 @@ class iFocus(Thread):
         self.__lsl_imu_flag = False
         if hasattr(self, "_lsl_imu"):
             del self._lsl_imu
+
+    def create_bdf_file(self, filename: str):
+        """
+        Create a BDF file and save data to it, invoke it after `start_acquisition_data()`.
+
+        Args:
+            filename: file name to save data, accept absolute or relative path.
+
+        Raises:
+            Exception: if data acquisition not started or `save_bdf_file` is invoked and BDF file already created.
+            OSError: if BDF file creation failed, this may be caused by invalid file path or permission issue.
+            importError: if `pyedflib` is not installed.
+        """
+        if self.__status != iFocus.Dev.SIGNAL:
+            raise Exception("Data acquisition not started")
+        if hasattr(self, "_bdf_file"):
+            raise Exception("BDF file already created.")
+        from ..utils.bdfWrapper import bdfSaver
+
+        if filename[-4:].lower() != ".bdf":
+            filename += ".bdf"
+        self._bdf_file = bdfSaver(
+            filename,
+            {**self.dev_args["channel_eeg"], **self.dev_args["channel_imu"]},
+            self.dev_args["fs_eeg"] + self.dev_args["fs_imu"],
+            self.dev_args["type"],
+        )
+        self.__bdf_flag = True
+
+    def close_bdf_file(self):
+        """
+        Close and save BDF file manually, invoked automatically after `stop_acquisition()` or `close_dev()`
+        """
+        self.__bdf_flag = False
+        if hasattr(self, "_bdf_file"):
+            self._bdf_file.close_bdf()
+            del self._bdf_file
+
+    def send_bdf_marker(self, marker: str):
+        """
+        Send marker to BDF file, can be invoked after `create_bdf_file()`, otherwise it will be ignored.
+
+        Args:
+            marker: marker string to write.
+        """
+        if hasattr(self, "_bdf_file"):
+            self._bdf_file.write_Annotation(marker)
 
     def close_dev(self):
         """

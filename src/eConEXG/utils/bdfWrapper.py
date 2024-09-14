@@ -65,6 +65,7 @@ class bdfSaver(EdfWriter, Thread):
                 self.__halt_flag.set()
 
     def run(self):
+        print("start")
         while self.__run_flag:
             self.__halt_flag.wait()
             while not self.__data_q.empty():

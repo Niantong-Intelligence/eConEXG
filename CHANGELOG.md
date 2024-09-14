@@ -3,6 +3,12 @@
 This file contains tracks the changes landing in eConEXG. 
 <!-- released start -->
 
+## 0.1.15
+
+Released on -----.
+
+* **ADD** eConAlpha device SDK
+ 
 ## 0.1.14
 
 Released on 2024-08-08.
