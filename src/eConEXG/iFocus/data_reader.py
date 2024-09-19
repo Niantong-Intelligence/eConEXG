@@ -331,14 +331,17 @@ class iFocus(Thread):
                         self._lsl_imu.push_chunk([frame[-1] for frame in ret])
                     if self.__with_q:
                         self.__save_data.put(ret)
-            except Exception:
-                traceback.print_exc()
+                    if self.__bdf_flag:
+                        self._bdf_file.write_chunk(ret)
+            except Exception as e:
+                print(e)
                 self.__socket_flag = "Data transmission timeout."
                 self.__status = iFocus.Dev.TERMINATE_START
 
         # clear buffer
         self.close_lsl_eeg()
         self.close_lsl_imu()
+        self.close_bdf_file()
         # self.dev.stop_recv()
         self.__parser.clear_buffer()
         self.__save_data.put(None)

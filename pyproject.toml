@@ -2,7 +2,7 @@
 name = "eConEXG"
 dynamic = ["version"]
 authors = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
-maintainers = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
+maintainers = [{ name = "Ethan Xie", email = "xiewenxuan0000@gmail.com" }]
 description = "SDK for Niantong devices."
 license = { file = "LICENSE" }
 keywords = ["eeg", "emg", "niantong", "econ"]
