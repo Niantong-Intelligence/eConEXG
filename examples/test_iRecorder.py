@@ -1,7 +1,8 @@
 from eConEXG import iRecorder
 import time
+import numpy as np
 
-dev_type = "W16"
+dev_type = "USB32"
 dev = iRecorder(dev_type=dev_type)
 print(dev.get_dev_info())
 
@@ -40,9 +41,18 @@ dev.start_acquisition_data(with_q=True)
 start = time.time()
 first_data = None
 count = 0
-duration = 10
+duration = 5
 while time.time() - start < duration:
     frames = dev.get_data(timeout=0.01)
+    print("-------FRAMES-----------")
+    try:
+        print(len(frames))
+        print(len(frames[0]))
+        print(len(frames[-1]))
+        n = np.array(frames)
+        print(n.shape)
+    except Exception as e:
+        continue
     for frame in frames:
         if not first_data:
             first_data = time.time()
