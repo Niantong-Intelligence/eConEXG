@@ -54,12 +54,13 @@ class eConAlpha(Thread):
         if port is None:
             port = eConAlpha.find_devs()[0]
         self.__save_data = Queue()
-        self.__with_q = True
         self.__parser = Parser()
         self.dev_args = deepcopy(eConAlpha.dev_args)
-        self.dev = sock(port, self.__parser._threshold)
+        self.dev = sock(port, self.__parser.threshold)
         self.set_frequency()
+        self.__with_q = True
         self.__socket_flag = "Device not connected, please connect first."
+        self.__bdf_flag = False
         try:
             self.dev.connect_socket()
         except Exception as e:
@@ -71,6 +72,8 @@ class eConAlpha(Thread):
         self.__socket_flag = None
         self.__lsl_imu_flag = False
         self.__lsl_eeg_flag = False
+        self._bdf_file = None
+        self.__enable_imu = False
         self.dev_args["name"] = port
         self.start()
 
@@ -124,7 +127,7 @@ class eConAlpha(Thread):
         Raises:
             Exception: if no iFocus device found.
         """
-        return sock._find_devs()
+        return sock.find_devs()
 
     def get_data(self, timeout: Optional[float] = 0.02) -> Optional[list[Optional[list]]]:
         """
@@ -250,6 +253,9 @@ class eConAlpha(Thread):
         if hasattr(self, "_lsl_imu"):
             del self._lsl_imu
 
+    def setIMUFlag(self, check):
+        self.__enable_imu = check
+
     def create_bdf_file(self, filename: str):
         """
         Create a BDF file and save data to it, invoke it after `start_acquisition_data()`.
@@ -264,18 +270,26 @@ class eConAlpha(Thread):
         """
         if self.__status != eConAlpha.Dev.SIGNAL:
             raise Exception("Data acquisition not started")
-        if hasattr(self, "_bdf_file"):
+        if self._bdf_file is not None:
             raise Exception("BDF file already created.")
-        from ..utils.bdfWrapper import bdfSaver
+        from ..utils.bdfWrapper import bdfSaverEEG, bdfSaverEEGIMU
 
         if filename[-4:].lower() != ".bdf":
             filename += ".bdf"
-        self._bdf_file = bdfSaver(
-            filename,
-            {**self.dev_args["channel_eeg"], **self.dev_args["channel_imu"]},
-            self.dev_args["fs_eeg"] + self.dev_args["fs_imu"],
-            self.dev_args["type"],
-        )
+        if self.__enable_imu:
+            self._bdf_file = bdfSaverEEGIMU(
+                filename,
+                self.dev_args["channel_eeg"], self.dev_args["fs_eeg"],
+                self.dev_args["channel_imu"], self.dev_args["fs_imu"],
+                self.dev_args["type"],
+            )
+        else:
+            self._bdf_file = bdfSaverEEG(
+                filename,
+                self.dev_args["channel_eeg"],
+                self.dev_args["fs_eeg"],
+                self.dev_args["type"],
+            )
         self.__bdf_flag = True
 
     def close_bdf_file(self):
@@ -283,9 +297,9 @@ class eConAlpha(Thread):
         Close and save BDF file manually, invoked automatically after `stop_acquisition()` or `close_dev()`
         """
         self.__bdf_flag = False
-        if hasattr(self, "_bdf_file"):
+        if self._bdf_file is not None:
             self._bdf_file.close_bdf()
-            del self._bdf_file
+            self._bdf_file = None
 
     def send_bdf_marker(self, marker: str):
         """
@@ -296,6 +310,12 @@ class eConAlpha(Thread):
         """
         if hasattr(self, "_bdf_file"):
             self._bdf_file.write_Annotation(marker)
+
+    def shock_band(self):
+        """
+        Send an instruction to shock the arm band
+        """
+        self.dev.shock_band()
 
     def close_dev(self):
         """

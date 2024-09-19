@@ -33,7 +33,7 @@ class sock:
             raise NotImplementedError("Invalid sample frequency.")
 
     @staticmethod
-    def _find_devs() -> list:
+    def find_devs() -> list:
         from serial.tools.list_ports import comports
         from serial import Serial, serialutil
 
@@ -65,10 +65,14 @@ class sock:
         except Exception:
             raise Exception("connection failed, no data available.")
 
-    def recv_socket(self, buffersize: Optional[int] = None):
-        if buffersize is None:
-            buffersize = self.data_len
-        return self.dev.read(buffersize)
+    def recv_socket(self, buffer_size: Optional[int] = None):
+        if buffer_size is None:
+            buffer_size = self.data_len
+        return self.dev.read(buffer_size)
+
+    def shock_band(self):
+        self.dev.write(self.cmd["V"])
+        time.sleep(self.delay)
 
     def start_data(self):
         self.dev.read_all()

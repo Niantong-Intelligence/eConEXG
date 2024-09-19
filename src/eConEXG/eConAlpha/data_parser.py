@@ -29,7 +29,7 @@ class Parser:
         self.__pattern = re.compile(
             b"\xbb\xaa.{%d}" % (offset + abs(self._preserved) - 2), flags=re.DOTALL
         )
-        self._threshold = offset + abs(self._preserved)
+        self.threshold = offset + abs(self._preserved)
         self.clear_buffer()
 
     def clear_buffer(self):
@@ -39,7 +39,7 @@ class Parser:
 
     def parse_data(self, q: bytes) -> list[list[float]]:
         self.__buffer.extend(q)
-        if len(self.__buffer) < self._threshold:
+        if len(self.__buffer) < self.threshold:
             return
         frames = []
         for frame_obj in self.__pattern.finditer(self.__buffer):
