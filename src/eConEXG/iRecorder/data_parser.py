@@ -1,6 +1,8 @@
 import re
 from datetime import datetime
 import numpy as np
+import math
+from gmssl import Sm4, DO_DECRYPT
 
 
 class Parser:
@@ -17,8 +19,18 @@ class Parser:
         self.batt_val = 0
         self.imp_flag = False
         self._ratio = 0.02235174
-        length = self.chs * self._byts + abs(self._checksum)
+
+        eKey = b"\x01\x23\x45\x67\x89\xab\xcd\xef\xfe\xdc\xba\x98\x76\x54\x32\x10"
+        self.enc = Sm4(eKey, encrypt=DO_DECRYPT)
+        length = math.ceil(self.chs * self._byts / len(eKey)) * len(eKey) + abs(self._checksum)
+
         self.__pattern = re.compile(b"\xbb\xaa.{%d}" % length, flags=re.DOTALL)
+
+    def dec_data(self, raw):
+        en = b""
+        for i in range(0, len(raw), 16):
+            en += self.enc.encrypt(raw[i: i + 16])
+        return en
 
     def _update_fs(self, fs):
         self._imp_len = int(512 * 2 * fs / 500)
@@ -77,6 +89,7 @@ class Parser:
                 err = f">>>> Pkt Los Cur:{cur_num} Last valid:{self.__last_num} buf len:{len(self.__buffer)} dropped times:{self._drop_count} {datetime.now()}<<<<\n"
                 print(err)
             self.__last_num = cur_num
+            raw = self.dec_data(raw)  # decrypt data if needed
             data = [
                 int.from_bytes(
                     raw[i * self._byts : (i + 1) * self._byts],

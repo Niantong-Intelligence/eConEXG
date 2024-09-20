@@ -6,7 +6,7 @@ maintainers = [{ name = "Ethan Xie", email = "xiewenxuan0000@gmail.com" }]
 description = "SDK for Niantong devices."
 license = { file = "LICENSE" }
 keywords = ["eeg", "emg", "niantong", "econ"]
-dependencies = ["numpy", "pyserial>=3.5"]
+dependencies = ["numpy", "pyserial>=3.5", "gmssl-python"]
 readme = "README.md"
 requires-python = ">= 3.9"
 classifiers = [

@@ -12,9 +12,9 @@ from .physical_interface import get_interface, get_sock
 
 class iRecorder(Thread):
     class Dev(Enum):
-        SIGNAL = 10  # signal transmision mode
+        SIGNAL = 10  # signal transmission mode
         SIGNAL_START = 11
-        IMPEDANCE = 20  # impedance transmision mode
+        IMPEDANCE = 20  # impedance transmission mode
         IMPEDANCE_START = 21
         IDLE = 30  # idle mode
         IDLE_START = 31
