@@ -176,7 +176,7 @@ class iRecorder(Thread):
             fs = default
         self.__dev_args.update({"fs": fs})
         self.__parser._update_fs(fs)
-        if hasattr(self, "dev"):
+        if self.dev is not None:
             self.dev.set_fs(fs)
 
     def connect_device(self, addr: str) -> None:
@@ -410,7 +410,7 @@ class iRecorder(Thread):
         """
         if self.__status != iRecorder.Dev.SIGNAL:
             raise Exception("Data acquisition not started")
-        if hasattr(self, "_bdf_file"):
+        if self._bdf_file is not None:
             raise Exception("BDF file already created.")
         from ..utils.bdfWrapper import bdfSaverIRecorder
 
@@ -429,9 +429,9 @@ class iRecorder(Thread):
         Close and save BDF file manually, invoked automatically after `stop_acquisition()` or `close_dev()`
         """
         self.__bdf_flag = False
-        if hasattr(self, "_bdf_file"):
+        if self._bdf_file is not None:
             self._bdf_file.close_bdf()
-            del self._bdf_file
+            self._bdf_file = None
 
     def send_bdf_marker(self, marker: str):
         """
@@ -440,7 +440,7 @@ class iRecorder(Thread):
         Args:
             marker: marker string to write.
         """
-        if hasattr(self, "_bdf_file"):
+        if self._bdf_file is not None:
             self._bdf_file.write_Annotation(marker)
 
     # def set_callback_handler(self, handler: Callable[[Optional[str]], None]):
