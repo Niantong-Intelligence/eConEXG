@@ -3,91 +3,89 @@ from datetime import datetime
 
 
 class Parser:
-    HOTKEY_TRIGGER = -2
-    BATTERY = -1
-    _start = 2
+    _byts = 3
+    _imu_bytes = 2
+    _ratio = 0.02235174
+    _header = 2
+    _emg_chs = 8
+    _emg_frames = 8
+    _emgs = _emg_frames * _emg_chs * _byts  # 8 frames per packet
+    _imu_chs = 6
+    _imus = _imu_chs * _imu_bytes
+
+    _preserved = -7
     _checksum = -3
-    _battery = -2
-    _packet = -1
+    _bat = -2
+    _seq = -1
 
-    def __init__(
-        self,
-        imu: bool = True,
-        num_channels=8,
-        bytes_per_channel=3,
-        max_packet_num=256,
-        fms_per_pkt=9,
-        scale_ratio=0.02235174,
-    ) -> None:
-        self.imu_channels = 0
-        self.imu = imu
-        if imu:
-            self.imu_channels = 6
-        self.bytes_per_imu = 2
+    def __init__(self) -> None:
+        self.__buffer = bytearray()
+        offset = self._header
+        self.emg_idx = [i + offset for i in range(0, self._emgs, self._byts)]
+        offset += self._emgs
+        self.imu_idx = [i + offset for i in range(0, self._imus, self._imu_bytes)]
+        offset += self._imus
 
-        self.num_channels = num_channels
-        self.ch_bytes = bytes_per_channel
-        self.max_packet_num = max_packet_num
-        self.scale_ratio = scale_ratio
-        self.fms_per_pkt = fms_per_pkt
-
-        length = (
-            self.num_channels * self.ch_bytes * self.fms_per_pkt
-            + self.bytes_per_imu * self.imu_channels
-            + abs(self._checksum)
+        self.__pattern = re.compile(
+            b"\xbb\xaa.{%d}" % (offset + abs(self._preserved) - 2), flags=re.DOTALL
         )
-        self.__pattern = re.compile(b"\xbb\xaa.{%d}" % length, flags=re.DOTALL)
+        self.threshold = offset + abs(self._preserved)
         self.clear_buffer()
 
     def clear_buffer(self):
-        self.__buffer = b""
-        self.__last_num = 255
-        self.packet_drop_count = 0
+        del self.__buffer[:]
+        self.__last = 255
+        self.__drop = 0
 
-    def parse_data(self, q: bytes):
-        self.__buffer += q
-        frame_list: list[bytes] = self.__pattern.findall(self.__buffer)
-        self.__buffer = self.__pattern.split(self.__buffer)[-1]
-        data_list = []
-
-        for frame in frame_list:
-            raw = frame[self._start : self._checksum]
-            if frame[self._checksum] != (~sum(raw)) & 0xFF:
-                err = f"|Checksum invalid, packet dropped{datetime.now()}\n|Current:{frame.hex()}"
+    def parse_data(self, q: bytes) -> list[list[float]]:
+        self.__buffer.extend(q)
+        if len(self.__buffer) < self.threshold:
+            return
+        frames = []
+        for frame_obj in self.__pattern.finditer(self.__buffer):
+            frame = memoryview(frame_obj.group())
+            if (
+                frame[self._checksum]
+                != (~sum(frame[self._header : self._preserved]))& 0xFF
+            ):
+                err = f"|EEG Checksum invalid, packet dropped{datetime.now()}\n|Current:{frame.hex()}"
                 print(err)
                 continue
-            cur_num = frame[self._packet]
-
-            if cur_num != ((self.__last_num + 1) % 256):
-                self.packet_drop_count += 1
-                err = f">>>> Pkt Los Cur:{cur_num} Last valid:{self.__last_num} buf len:{len(self.__buffer)} dropped packets:{self.packet_drop_count} {datetime.now()}<<<<\n"
+            cur_num = frame[self._seq]
+            if cur_num != ((self.__last + 1) % 256):
+                self.__drop += 1
+                err = f">>>> EEG Pkt Los Cur:{cur_num} Last valid:{self.__last} buf len:{len(self.__buffer)} dropped: {self.__drop} times {datetime.now()}<<<<\n"
                 print(err)
-            self.__last_num = cur_num
+            self.__last = cur_num
 
-            channels = [
-                int.from_bytes(raw[i : i + self.ch_bytes], signed=True, byteorder="big")
-                for i in range(
-                    0,
-                    len(raw) - self.imu_channels * self.bytes_per_imu,
-                    self.ch_bytes,
+            emg = [
+                int.from_bytes(
+                    frame[i : i + self._byts],
+                    signed=True,
+                    byteorder="big",
                 )
+                * self._ratio
+                for i in self.emg_idx
             ]
-            imu_data = []
-            if self.imu:
-                raw = raw[-self.imu_channels * self.bytes_per_imu :]
-                imu_data = [
-                    int.from_bytes(
-                        raw[i : i + self.bytes_per_imu], signed=True, byteorder="big"
-                    )
-                    for i in range(0, len(raw), self.bytes_per_imu)
-                ]
+            emg = [
+                emg[i : i + self._emg_frames]
+                for i in range(0, len(emg), self._emg_frames)
+            ]
+            imu = [
+                int.from_bytes(
+                    frame[i : i + self._imu_bytes],
+                    signed=True,
+                    byteorder="little",
+                )
+                for i in self.imu_idx
+            ]
+            emg.append(imu)
+            frames.append(emg)
+        if frames:
+            del self.__buffer[: frame_obj.end()]
+            return frames
 
-            for channel in range(self.fms_per_pkt):
-                data = channels[
-                    channel * self.num_channels : (channel + 1) * self.num_channels
-                ]
-                data.extend(imu_data)
-                data.append(0)  # cus trigger
-                data.append(frame[self._battery])
-                data_list.append(data)
-        return data_list
+
+if __name__ == "__main__":
+    parser = Parser()
+    print(vars(parser))

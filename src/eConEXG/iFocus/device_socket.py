@@ -54,8 +54,8 @@ class sock:
             time.sleep(0.1)
         raise Exception("connection failed, no data available.")
 
-    def recv_socket(self, buffersize: int = 30):
-        return self.dev.read(buffersize)
+    def recv_socket(self, buffer_size: int = 30):
+        return self.dev.read(buffer_size)
 
     def start_data(self):
         self.dev.read_all()

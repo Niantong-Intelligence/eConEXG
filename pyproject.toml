@@ -2,7 +2,7 @@
 name = "eConEXG"
 dynamic = ["version"]
 authors = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
-maintainers = [{ name = "Alex You", email = "yoyialex@outlook.com" }]
+maintainers = [{ name = "Ethan Xie", email = "xiewenxuan0000@gmail.com" }]
 description = "SDK for Niantong devices."
 license = { file = "LICENSE" }
 keywords = ["eeg", "emg", "niantong", "econ"]
@@ -38,6 +38,8 @@ wifi = [
   "netifaces2;platform_system=='Linux'",
   "pywifi>=1.1.12;platform_system=='Windows'",
   "comtypes;platform_system=='Windows'",
+  "pyobjc-framework-CoreWLAN;platform_system=='Darwin'",
+  "pyobjc-framework-CoreLocation;platform_system=='Darwin'",
 ]
 
 [build-system]

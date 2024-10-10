@@ -53,6 +53,9 @@ class iRecorder(Thread):
         self.__dev_sock = get_sock(dev_type)
         self.__dev_args.update({"AdapterInfo": self.__interface.interface})
 
+        self._bdf_file = None
+        self.dev = None
+
         self.set_frequency()
         self.update_channels()
 
@@ -173,7 +176,7 @@ class iRecorder(Thread):
             fs = default
         self.__dev_args.update({"fs": fs})
         self.__parser._update_fs(fs)
-        if hasattr(self, "dev"):
+        if self.dev is not None:
             self.dev.set_fs(fs)
 
     def connect_device(self, addr: str) -> None:
@@ -254,8 +257,8 @@ class iRecorder(Thread):
             timeout: Non-negative value, blocks at most `timeout` seconds and return, if set to `None`, blocks until new data is available.
 
         Returns:
-            A list of frames, each frame is a list contains all wanted eeg channels and triggerbox channel,
-                eeg channels can be updatd by `update_channels()`.
+            A list of frames, each frame is a list contains all wanted eeg channels and trigger box channel,
+                eeg channels can be updated by `update_channels()`.
 
         Data Unit:
             - eeg: microvolts (µV)
@@ -407,13 +410,13 @@ class iRecorder(Thread):
         """
         if self.__status != iRecorder.Dev.SIGNAL:
             raise Exception("Data acquisition not started")
-        if hasattr(self, "_bdf_file"):
+        if self._bdf_file is not None:
             raise Exception("BDF file already created.")
-        from ..utils.bdfWrapper import bdfSaver
+        from ..utils.bdfWrapper import bdfSaverIRecorder
 
         if filename[-4:].lower() != ".bdf":
             filename += ".bdf"
-        self._bdf_file = bdfSaver(
+        self._bdf_file = bdfSaverIRecorder(
             filename,
             self.__dev_args["ch_info"],
             self.__dev_args["fs"],
@@ -426,9 +429,9 @@ class iRecorder(Thread):
         Close and save BDF file manually, invoked automatically after `stop_acquisition()` or `close_dev()`
         """
         self.__bdf_flag = False
-        if hasattr(self, "_bdf_file"):
+        if self._bdf_file is not None:
             self._bdf_file.close_bdf()
-            del self._bdf_file
+            self._bdf_file = None
 
     def send_bdf_marker(self, marker: str):
         """
@@ -437,7 +440,7 @@ class iRecorder(Thread):
         Args:
             marker: marker string to write.
         """
-        if hasattr(self, "_bdf_file"):
+        if self._bdf_file is not None:
             self._bdf_file.write_Annotation(marker)
 
     # def set_callback_handler(self, handler: Callable[[Optional[str]], None]):

@@ -7,85 +7,110 @@ import time
 
 
 class wifiMACOS(Thread):
-    PATH_OF_AIRPORT = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
-
     def __init__(self, device_queue: Queue):
         super().__init__(daemon=True)
         self.device_queue = device_queue
         self.port = 4321
+        self.__search_flag = True
         self.__interface = self.validate_interface()
 
     @property
     def interface(self):
-        return self.__interface
+        return self.__interface.interfaceName()
 
     def validate_interface(self):
-        out = subprocess.check_output(["networksetup", "-listallhardwareports"])
-        interfaces = out.decode(locale.getpreferredencoding()).split("\n\n")
-        for iface in interfaces:
-            if "Wi-Fi" not in iface:
-                continue
-            lines = iface.split("\n")
-            for line in lines:
-                if "Device" not in line:
-                    continue
-                self.iface = line.split(":")[1].strip()
-                return str(self.iface)
-        raise Exception("Wi-Fi interface not found")
+        from CoreWLAN import CWWiFiClient
 
-    def _get_default_gateway(self):
-        time.sleep(1)
-        gateways = netifaces.gateways()
-        for ips in gateways[netifaces.AF_INET]:
-            if ips[1] == self.iface:
-                return ips[0]
+        obj = CWWiFiClient.sharedWiFiClient().interface()
+        if not obj.powerOn():
+            raise Exception("Wi-Fi interface not on")
+        return obj
+
+    def _get_default_gateway(self, timeout=2):
+        start = time.time()
+        while time.time() - start < timeout:
+            gateways = netifaces.gateways()
+            try:  # avoid KeyError: 2
+                for ips in gateways[netifaces.AF_INET]:
+                    if ips[1] == self.interface:
+                        return ips[0]
+            except Exception:
+                pass
+        return None
+
+    def __request_location(self):
+        from CoreLocation import CLLocationManager
+
+        location_manager = CLLocationManager.alloc().init()
+        # location_manager.requestAlwaysAuthorization()
+        location_manager.requestWhenInUseAuthorization()
+        location_manager.startUpdatingLocation()
+        max_wait = 12
+        for _ in range(1, max_wait):
+            authorization_status = location_manager.authorizationStatus()
+            if authorization_status == 3 or authorization_status == 4:
+                return
+            time.sleep(1)
+        else:
+            return "Unable to obtain Location service authorization."
 
     def run(self):
-        added_devices = set()
-        # TODO: WARNING: The airport command line tool is deprecated and will be removed in a future release.
-        command = [self.PATH_OF_AIRPORT, "-s"]
-        self.child_process = subprocess.Popen(command, stdout=subprocess.PIPE)
-        result, _ = self.child_process.communicate()
-        result = result.decode(locale.getpreferredencoding())
-        output = result.splitlines()
-        if not output:
-            self.device_queue.put("Failed to scan WiFi devices.")
+        ret = self.__request_location()
+        if ret is not None:
+            self.device_queue.put(f"Error: {ret}")
             return
-        for line in output[1:]:
-            fields = line.split()
-            ssid = fields[0]  # 1:bssid, 2:rssi
-            if "iRe" not in ssid:
-                continue
-            if ssid not in added_devices:
-                added_devices.add(ssid)
-                self.device_queue.put([ssid, "", ssid])
+        added_devices = set()
+        while self.__search_flag:
+            output, error = self.__interface.scanForNetworksWithName_error_(None, None)
+            if error is not None:
+                if "busy" in str(error).lower():
+                    time.sleep(1)
+                    continue
+                self.device_queue.put(f"Error during scanning: {error}")
+                return
+            if output is None:
+                self.device_queue.put("Failed to scan WiFi devices.")
+                return
+            for network in output:
+                ssid = str(network.ssid())
+                if "iRe" not in ssid:
+                    continue
+                if ssid not in added_devices:
+                    added_devices.add(ssid)
+                    self.device_queue.put([ssid, str(network.bssid()), ssid])
 
     def stop(self):
-        if hasattr(self, "child_process"):
-            if self.child_process.poll() is None:
-                self.child_process.wait()
+        self.__search_flag = False
 
     def connect(self, ssid):
         self.stop()
         # check if network already connected
-        command = ["networksetup", "-getairportnetwork", self.iface]
+        command = ["networksetup", "-getairportnetwork", self.interface]
         result = subprocess.check_output(command)
         result = result.decode(locale.getpreferredencoding()).split(":")
         if len(result) > 1:
             if result[1].strip() == ssid:
-                host = self._get_default_gateway()
+                host = self._get_default_gateway(timeout=1)
                 if host:
                     return (host, self.port)
         # connect
-        command = ["networksetup", "-setairportnetwork", self.iface, ssid]
+        command = ["networksetup", "-setairportnetwork", self.interface, ssid]
         self.child_process = subprocess.Popen(command, stdout=subprocess.PIPE)
         out, _ = self.child_process.communicate()
         # process.wait()
         result = out.decode(locale.getpreferredencoding())
         if not result:
-            host = self._get_default_gateway()
+            host = self._get_default_gateway(timeout=2)
             if host:
                 return (host, self.port)
         else:
             warn = "Wi-Fi connection failed, please retry.\nFor encrypted device, connect through system setting first."
             raise Exception(warn)
+
+if __name__ == '__main__':
+    q = Queue()
+    wifi = wifiMACOS(q)
+    wifi.start()
+    while True:
+        if not q.empty():
+            print(q.get())
