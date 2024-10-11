@@ -107,7 +107,8 @@ class wifiMACOS(Thread):
             warn = "Wi-Fi connection failed, please retry.\nFor encrypted device, connect through system setting first."
             raise Exception(warn)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     q = Queue()
     wifi = wifiMACOS(q)
     wifi.start()

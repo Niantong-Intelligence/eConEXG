@@ -6,7 +6,7 @@ import numpy as np
 from abc import abstractmethod
 from pyedflib import FILETYPE_BDFPLUS, EdfWriter
 
-scale = 2 ** 23
+scale = 2**23
 info = {
     "label": "",
     "physical_max": int(round((scale - 1) * 0.02235174)),
@@ -110,8 +110,14 @@ class bdfSaverEEG(bdfSaver):
         # [[ch1_1,ch1_2,...],[ch2_1,ch2_2,...],...]
         for frame in frames:
             eeg_signal = np.array(frame[:-1]).T
-            offset = eeg_signal.shape[1] if self._save_cnt + eeg_signal.shape[1] <= self.fs else self.fs - self._save_cnt
-            self._data_write[:, self._save_cnt: self._save_cnt + offset] = eeg_signal[:, :offset]
+            offset = (
+                eeg_signal.shape[1]
+                if self._save_cnt + eeg_signal.shape[1] <= self.fs
+                else self.fs - self._save_cnt
+            )
+            self._data_write[:, self._save_cnt : self._save_cnt + offset] = eeg_signal[
+                :, :offset
+            ]
             self._save_cnt += offset
             if self._save_cnt >= self.fs:
                 self._data_q.put(np.vsplit(self._data_write, self.chs_len))
@@ -120,7 +126,9 @@ class bdfSaverEEG(bdfSaver):
 
 
 class bdfSaverEEGIMU(bdfSaver):
-    def __init__(self, filename, chs_eeg: dict, fs_eeg: int, chs_imu: dict, fs_imu, dev_type: str) -> None:
+    def __init__(
+        self, filename, chs_eeg: dict, fs_eeg: int, chs_imu: dict, fs_imu, dev_type: str
+    ) -> None:
         self.fs_eeg = int(fs_eeg)
         self.chs_eeg = [i for i in chs_eeg.keys()]
         self.chs_eeg_len = len(chs_eeg)
@@ -139,7 +147,9 @@ class bdfSaverEEGIMU(bdfSaver):
         info_eeg.update({"sample_frequency": self.fs_eeg})
         info_imu = info.copy()
         info_imu.update({"sample_frequency": self.fs_imu})
-        self.__init_chs_info(dev_type, info_eeg, self.chs_eeg_names, info_imu, self.chs_imu_names)
+        self.__init_chs_info(
+            dev_type, info_eeg, self.chs_eeg_names, info_imu, self.chs_imu_names
+        )
         self.__save_cnt_eeg = 0
         self.__save_cnt_imu = 0
         self.__data_write_eeg = np.zeros((self.chs_eeg_len, self.fs_eeg))
@@ -147,7 +157,9 @@ class bdfSaverEEGIMU(bdfSaver):
 
         self.start()
 
-    def __init_chs_info(self, dev_type, ch_eeg_info, ch_eeg_names, ch_imu_info, ch_imu_names) -> None:
+    def __init_chs_info(
+        self, dev_type, ch_eeg_info, ch_eeg_names, ch_imu_info, ch_imu_names
+    ) -> None:
         self.setEquipment(dev_type)
         self.setPatientName("eCon")
         self.set_number_of_annotation_signals(30)
@@ -166,12 +178,19 @@ class bdfSaverEEGIMU(bdfSaver):
         for frame in frames:
             eeg_signal = np.array(frame[:-1]).T
             imu_signal = np.array(frame[-1:]).T
-            self.__data_write_eeg[:, self.__save_cnt_eeg: self.__save_cnt_eeg + eeg_signal.shape[1]] = eeg_signal
-            self.__data_write_imu[:, self.__save_cnt_imu: self.__save_cnt_imu + 1] = imu_signal
+            self.__data_write_eeg[
+                :, self.__save_cnt_eeg : self.__save_cnt_eeg + eeg_signal.shape[1]
+            ] = eeg_signal
+            self.__data_write_imu[:, self.__save_cnt_imu : self.__save_cnt_imu + 1] = (
+                imu_signal
+            )
             self.__save_cnt_eeg += eeg_signal.shape[1]
             self.__save_cnt_imu += 1
             if self.__save_cnt_eeg >= self.fs_eeg or self.__save_cnt_imu >= self.fs_imu:
-                self._data_q.put(np.vsplit(self.__data_write_eeg, self.chs_eeg_len) + np.vsplit(self.__data_write_imu, self.chs_imu_len))
+                self._data_q.put(
+                    np.vsplit(self.__data_write_eeg, self.chs_eeg_len)
+                    + np.vsplit(self.__data_write_imu, self.chs_imu_len)
+                )
                 self.__save_cnt_eeg = 0
                 self.__save_cnt_imu = 0
                 self._halt_flag.set()
@@ -179,5 +198,7 @@ class bdfSaverEEGIMU(bdfSaver):
     def _log_inter_trigger(self, description, start, duration):
         pass
 
-    def writeAnnotation(self, onset_in_seconds, duration_in_seconds, description, str_format='utf_8'):
+    def writeAnnotation(
+        self, onset_in_seconds, duration_in_seconds, description, str_format="utf_8"
+    ):
         pass

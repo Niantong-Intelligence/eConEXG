@@ -12,9 +12,9 @@ from .physical_interface import get_interface, get_sock
 
 class iRecorder(Thread):
     class Dev(Enum):
-        SIGNAL = 10  # signal transmision mode
+        SIGNAL = 10  # signal transmission mode
         SIGNAL_START = 11
-        IMPEDANCE = 20  # impedance transmision mode
+        IMPEDANCE = 20  # impedance transmission mode
         IMPEDANCE_START = 21
         IDLE = 30  # idle mode
         IDLE_START = 31
@@ -156,7 +156,7 @@ class iRecorder(Thread):
 
         Args:
             fs: sample frequency in Hz, if `fs` is set to `None` or not in `get_available_frequency()`,
-                it will fallback to the lowest available frequency.
+                it will fall back to the lowest available frequency.
 
         Raises:
             Exception: Device is already connected.
@@ -233,7 +233,7 @@ class iRecorder(Thread):
 
         Args:
             with_q: if True, signal data will be stored in a queue and **should** be acquired by calling `get_data()` in a loop in case data queue is full.
-                if False, new data will not be directly availabled and can only be acquired through `open_lsl_stream` and `save_bdf_file`.
+                if False, new data will not be directly available and can only be acquired through `open_lsl_stream` and `save_bdf_file`.
 
         Raises:
             Exception: if device not connected or data acquisition init failed.
@@ -249,7 +249,9 @@ class iRecorder(Thread):
             time.sleep(0.01)
         self.__check_dev_status()
 
-    def get_data(self, timeout: Optional[float] = 0.02) -> list[Optional[list]]:
+    def get_data(
+        self, timeout: Optional[float] = 0.02
+    ) -> Optional[list[Optional[list]]]:
         """
         Acquire all available data, make sure this function is called in a loop when `with_q` is set to `True` in`start_acquisition_data()`
 
@@ -261,7 +263,7 @@ class iRecorder(Thread):
                 eeg channels can be updated by `update_channels()`.
 
         Data Unit:
-            - eeg: microvolts (µV)
+            - eeg: micro volts (µV)
             - triggerbox: int, from `0` to `255`
 
         Raises:
@@ -388,13 +390,6 @@ class iRecorder(Thread):
         self.__lsl_flag = False
         if hasattr(self, "_lsl_stream"):
             del self._lsl_stream
-
-    def save_bdf_file(self, filename: str):
-        """'save_bdf_file() will be deprecated in the future, use create_bdf_file() instead.'"""
-        print(
-            "WARNING: save_bdf_file() will be deprecated in the future, use create_bdf_file() instead."
-        )
-        self.create_bdf_file(filename)
 
     def create_bdf_file(self, filename: str):
         """

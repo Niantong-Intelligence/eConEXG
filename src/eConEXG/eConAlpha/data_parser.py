@@ -46,7 +46,7 @@ class Parser:
             frame = memoryview(frame_obj.group())
             if (
                 frame[self._checksum]
-                != (~sum(frame[self._header : self._preserved]))& 0xFF
+                != (~sum(frame[self._header : self._preserved])) & 0xFF
             ):
                 err = f"|EEG Checksum invalid, packet dropped{datetime.now()}\n|Current:{frame.hex()}"
                 print(err)

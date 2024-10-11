@@ -129,7 +129,9 @@ class eConAlpha(Thread):
         """
         return sock.find_devs()
 
-    def get_data(self, timeout: Optional[float] = 0.02) -> Optional[list[Optional[list]]]:
+    def get_data(
+        self, timeout: Optional[float] = 0.02
+    ) -> Optional[list[Optional[list]]]:
         """
         Acquire all available data, make sure this function is called in a loop when `with_q` is set to `True` in`start_acquisition_data()`
 
@@ -279,8 +281,10 @@ class eConAlpha(Thread):
         if self.__enable_imu:
             self._bdf_file = bdfSaverEEGIMU(
                 filename,
-                self.dev_args["channel_eeg"], self.dev_args["fs_eeg"],
-                self.dev_args["channel_imu"], self.dev_args["fs_imu"],
+                self.dev_args["channel_eeg"],
+                self.dev_args["fs_eeg"],
+                self.dev_args["channel_imu"],
+                self.dev_args["fs_imu"],
                 self.dev_args["type"],
             )
         else:
