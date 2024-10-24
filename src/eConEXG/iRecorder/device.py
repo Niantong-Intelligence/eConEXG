@@ -23,13 +23,11 @@ class iRecorder(Thread):
 
     def __init__(
         self,
-        dev_type: Literal["W8", "USB8", "W16", "USB16", "W32", "USB32"],
+        dev_type: str
     ):
         """
         Args:
-            dev_type: iRecorder device type.
-
-
+            dev_type: iRecorder device type. available options: Literal["W8", "USB8", "W16", "USB16", "W32", "USB32"]
         Raises:
             Exception: if device type not supported.
             Exception: if adapter not available.

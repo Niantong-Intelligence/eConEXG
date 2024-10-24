@@ -3,9 +3,14 @@
 This file contains tracks the changes landing in eConEXG. 
 <!-- released start -->
 
-## 0.1.15
+## 0.1.18
 
-Released on -----.
+Release on 2024-10-10
+
+* **ADD** Add `create_bdf_file` and `close_bdf_file` to iRecorder and eConAlpha. 
+* **ADD** Add imu support to iRecorder and eConAlpha. 
+
+## 0.1.15
 
 * **ADD** eConAlpha device SDK
  
