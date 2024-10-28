@@ -288,7 +288,7 @@ class iFocus(Thread):
         self.__bdf_flag = False
         if self._bdf_file is not None:
             self._bdf_file.close_bdf()
-            del self._bdf_file
+            self._bdf_file = None
 
     def send_bdf_marker(self, marker: str):
         """
