@@ -55,6 +55,7 @@ dev-dependencies = [
   "mkdocstrings[python]>=0.25.1",
   "mkdocs-material>=9.5.25",
   "mkdocs-include-markdown-plugin>=6.2.1",
+  "scipy>=1.14.0",
 ]
 
 [tool.hatch.build]

@@ -1,11 +1,13 @@
 import queue
 import time
+import numpy as np
 from copy import deepcopy
 from enum import Enum
 from queue import Queue
 from threading import Thread
-from typing import Literal, Optional
+from typing import Optional
 
+from ..utils.filter import SignalFilter
 from .data_parser import Parser
 from .physical_interface import get_interface, get_sock
 
@@ -38,8 +40,10 @@ class iRecorder(Thread):
         self.handler = None
         self.__info_q = Queue(128)
         self.__with_q = True
+        self.__with_process = False
         self.__error_message = "Device not connected, please connect first."
         self.__save_data = Queue()
+        self.__update_func = []
         self.__status = iRecorder.Dev.TERMINATE
         self.__lsl_flag = False
         self.__bdf_flag = False
@@ -47,6 +51,7 @@ class iRecorder(Thread):
         self.__dev_args.update({"channel": self.__get_chs()})
 
         self.__parser = Parser(self.__dev_args["channel"])
+        self.filter = SignalFilter(self.__dev_args["channel"], None)
         self.__interface = get_interface(dev_type)(self.__info_q)
         self.__dev_sock = get_sock(dev_type)
         self.__dev_args.update({"AdapterInfo": self.__interface.interface})
@@ -174,6 +179,7 @@ class iRecorder(Thread):
             fs = default
         self.__dev_args.update({"fs": fs})
         self.__parser._update_fs(fs)
+        self.filter.fs = fs
         if self.dev is not None:
             self.dev.set_fs(fs)
 
@@ -225,19 +231,23 @@ class iRecorder(Thread):
         ch_idx = [i for i in channels.keys()]
         self.__parser._update_chs(ch_idx)
 
-    def start_acquisition_data(self, with_q: bool = True):
+    def start_acquisition_data(self, mod: int = 0):
         """
         Send data acquisition command to device, block until data acquisition started or failed.
 
         Args:
-            with_q: if True, signal data will be stored in a queue and **should** be acquired by calling `get_data()` in a loop in case data queue is full.
-                if False, new data will not be directly available and can only be acquired through `open_lsl_stream` and `save_bdf_file`.
+            mod: if 0, signal data will be stored in a queue and **should** be acquired by calling `get_data()` in a loop in case data queue is full.
+                if 1, data will be passed to out of class functions directly, which is more efficient in multithread and multiprocess(with shared memory).
+                data can also be acquired through `open_lsl_stream` and `save_bdf_file`.
 
         Raises:
             Exception: if device not connected or data acquisition init failed.
         """
         self.__check_dev_status()
-        self.__with_q = with_q
+        if mod == 0:
+            self.__with_q, self.__with_process = True, False
+        elif mod == 1:
+            self.__with_q, self.__with_process = False, True
         if self.__status == iRecorder.Dev.SIGNAL:
             return
         if self.__status == iRecorder.Dev.IMPEDANCE:
@@ -246,6 +256,33 @@ class iRecorder(Thread):
         while self.__status not in [iRecorder.Dev.SIGNAL, iRecorder.Dev.TERMINATE]:
             time.sleep(0.01)
         self.__check_dev_status()
+
+    def add_update_functions(self, funcs: list = None) -> None:
+        """
+        Add out of class functions, while can be used in __process_data() method
+
+        Args:
+            funcs: list of functions to add.
+        """
+        self.__update_func += funcs
+
+    def __process_data(self, data=None) -> None:
+        """
+        Process data by signal filtering. After that, call out of class functions to use the data.
+
+        Args:
+            data: ndarray type, store eeg signal data.
+
+        Raises:
+            Exception: exceptions from out of class functions while handling the data
+        """
+        if data is None:
+            return
+        try:
+            for func in self.__update_func:
+                func(data)
+        except Exception as e:
+            raise e
 
     def get_data(
         self, timeout: Optional[float] = 0.02
@@ -498,6 +535,11 @@ class iRecorder(Thread):
                 if ret:
                     if self.__with_q:
                         self.__save_data.put(ret)
+                    elif self.__with_process:
+                        ret_array = np.array(ret).T
+                        if ret_array.size > 0:
+                            self.filter.l_filter(ret_array)
+                            self.__process_data(ret_array)
                     if self.__bdf_flag:
                         self._bdf_file.write_chunk(ret)
                     if self.__lsl_flag:
