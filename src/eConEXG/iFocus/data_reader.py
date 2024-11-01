@@ -21,9 +21,9 @@ class iFocus(Thread):
 
     dev_args = {
         "type": "iFocus",
-        "fs_emg": 250,
+        "fs_eeg": 250,
         "fs_imu": 50,
-        "channel_emg": {0: "CH0"},
+        "channel_eeg": {0: "CH0"},
         "channel_imu": {0: "X", 1: "Y", 2: "Z"},
         "AdapterInfo": "Serial Port",
     }
@@ -64,29 +64,29 @@ class iFocus(Thread):
         self.dev_args["name"] = port
         self.start()
 
-    def set_frequency(self, fs_emg: int = None):
+    def set_frequency(self, fs_eeg: int = None):
         """
         Change the sampling frequency of iFocus.
 
         Args:
-            fs_emg: sampling frequency of eeg data, should be 250 or 500,
-                fs_imu will be automatically set to 1/5 of fs_emg.
+            fs_eeg: sampling frequency of eeg data, should be 250 or 500,
+                fs_imu will be automatically set to 1/5 of fs_eeg.
 
         Raises:
-            ValueError: if fs_emg is not 250 or 500.
+            ValueError: if fs_eeg is not 250 or 500.
             NotImplementedError: device firmware too old, not supporting 500Hz.
         """
         if self.__status == iFocus.Dev.SIGNAL:
             raise Exception("Data acquisition already started, please stop first.")
-        if fs_emg is None:
-            fs_emg = self.dev_args["fs_emg"]
-        if fs_emg not in [250, 500]:
-            raise ValueError("fs_emg should be 250 or 500")
-        self.dev_args["fs_emg"] = fs_emg
-        fs_imu = fs_emg // 5
+        if fs_eeg is None:
+            fs_eeg = self.dev_args["fs_eeg"]
+        if fs_eeg not in [250, 500]:
+            raise ValueError("fs_eeg should be 250 or 500")
+        self.dev_args["fs_eeg"] = fs_eeg
+        fs_imu = fs_eeg // 5
         self.dev_args["fs_imu"] = fs_imu
         if hasattr(self, "dev"):
-            self.dev.set_frequency(fs_emg)
+            self.dev.set_frequency(fs_eeg)
 
     def get_dev_info(self) -> dict:
         """
@@ -95,10 +95,10 @@ class iFocus(Thread):
         Returns:
             A dictionary containing device information, which includes:
                 `type`: hardware type;
-                `channel_emg`: channel dictionary, including EEG channel index and name;
+                `channel_eeg`: channel dictionary, including EEG channel index and name;
                 `channel_imu`: channel dictionary, including IMU channel index and name;
                 `AdapterInfo`: adapter used for connection;
-                `fs_emg`: sample frequency of EEG in Hz;
+                `fs_eeg`: sample frequency of EEG in Hz;
                 `fs_imu`: sample frequency of IMU in Hz;
         """
         return deepcopy(self.dev_args)
@@ -192,10 +192,10 @@ class iFocus(Thread):
         from ..utils.lslWrapper import lslSender
 
         self._lsl_emg = lslSender(
-            self.dev_args["channel_emg"],
+            self.dev_args["channel_eeg"],
             f"{self.dev_args['type']}EEG{self.dev_args['name'][-2:]}",
             "EEG",
-            self.dev_args["fs_emg"],
+            self.dev_args["fs_eeg"],
             with_trigger=False,
         )
         self.__lsl_emg_flag = True
@@ -258,7 +258,7 @@ class iFocus(Thread):
 
         key = 0
         elctds = {}
-        for k, v in self.dev_args["channel_emg"].items():
+        for k, v in self.dev_args["channel_eeg"].items():
             elctds[key] = v
             key += 1
         for k, v in self.dev_args["channel_imu"].items():
@@ -268,7 +268,7 @@ class iFocus(Thread):
             elctds,
             f"{self.dev_args['type']}EEG-IMU{self.dev_args['name'][-2:]}",
             "EEG-IMU",
-            self.dev_args["fs_emg"] + self.dev_args["fs_imu"],
+            self.dev_args["fs_eeg"] + self.dev_args["fs_imu"],
             unit="degree",
             with_trigger=False,
         )
@@ -310,8 +310,8 @@ class iFocus(Thread):
         if self.__enable_imu:
             self._bdf_file = bdfSaverEMGIMU(
                 filename,
-                self.dev_args["channel_emg"],
-                self.dev_args["fs_emg"],
+                self.dev_args["channel_eeg"],
+                self.dev_args["fs_eeg"],
                 self.dev_args["channel_imu"],
                 self.dev_args["fs_imu"],
                 self.dev_args["type"],
@@ -319,8 +319,8 @@ class iFocus(Thread):
         else:
             self._bdf_file = bdfSaverEMG(
                 filename,
-                self.dev_args["channel_emg"],
-                self.dev_args["fs_emg"],
+                self.dev_args["channel_eeg"],
+                self.dev_args["fs_eeg"],
                 self.dev_args["type"],
             )
         self.__bdf_flag = True
