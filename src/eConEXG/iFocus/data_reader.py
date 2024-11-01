@@ -21,9 +21,9 @@ class iFocus(Thread):
 
     dev_args = {
         "type": "iFocus",
-        "fs_eeg": 250,
+        "fs_emg": 250,
         "fs_imu": 50,
-        "channel_eeg": {0: "CH0"},
+        "channel_emg": {0: "CH0"},
         "channel_imu": {0: "X", 1: "Y", 2: "Z"},
         "AdapterInfo": "Serial Port",
     }
@@ -54,38 +54,39 @@ class iFocus(Thread):
                 raise e
         self.__status = iFocus.Dev.IDLE_START
         self.__socket_flag = None
-        self._lsl_eeg = None
+        self._lsl_emg = None
         self._lsl_imu = None
+        self._lsl_emg_imu = None
         self.__lsl_imu_flag = False
-        self.__lsl_eeg_flag = False
+        self.__lsl_emg_flag = False
         self._bdf_file = None
         self.__enable_imu = False
         self.dev_args["name"] = port
         self.start()
 
-    def set_frequency(self, fs_eeg: int = None):
+    def set_frequency(self, fs_emg: int = None):
         """
         Change the sampling frequency of iFocus.
 
         Args:
-            fs_eeg: sampling frequency of eeg data, should be 250 or 500,
-                fs_imu will be automatically set to 1/5 of fs_eeg.
+            fs_emg: sampling frequency of eeg data, should be 250 or 500,
+                fs_imu will be automatically set to 1/5 of fs_emg.
 
         Raises:
-            ValueError: if fs_eeg is not 250 or 500.
+            ValueError: if fs_emg is not 250 or 500.
             NotImplementedError: device firmware too old, not supporting 500Hz.
         """
         if self.__status == iFocus.Dev.SIGNAL:
             raise Exception("Data acquisition already started, please stop first.")
-        if fs_eeg is None:
-            fs_eeg = self.dev_args["fs_eeg"]
-        if fs_eeg not in [250, 500]:
-            raise ValueError("fs_eeg should be 250 or 500")
-        self.dev_args["fs_eeg"] = fs_eeg
-        fs_imu = fs_eeg // 5
+        if fs_emg is None:
+            fs_emg = self.dev_args["fs_emg"]
+        if fs_emg not in [250, 500]:
+            raise ValueError("fs_emg should be 250 or 500")
+        self.dev_args["fs_emg"] = fs_emg
+        fs_imu = fs_emg // 5
         self.dev_args["fs_imu"] = fs_imu
         if hasattr(self, "dev"):
-            self.dev.set_frequency(fs_eeg)
+            self.dev.set_frequency(fs_emg)
 
     def get_dev_info(self) -> dict:
         """
@@ -94,10 +95,10 @@ class iFocus(Thread):
         Returns:
             A dictionary containing device information, which includes:
                 `type`: hardware type;
-                `channel_eeg`: channel dictionary, including EEG channel index and name;
+                `channel_emg`: channel dictionary, including EEG channel index and name;
                 `channel_imu`: channel dictionary, including IMU channel index and name;
                 `AdapterInfo`: adapter used for connection;
-                `fs_eeg`: sample frequency of EEG in Hz;
+                `fs_emg`: sample frequency of EEG in Hz;
                 `fs_imu`: sample frequency of IMU in Hz;
         """
         return deepcopy(self.dev_args)
@@ -175,7 +176,7 @@ class iFocus(Thread):
             time.sleep(0.01)
         self.__check_dev_status()
 
-    def open_lsl_eeg(self):
+    def open_lsl_emg(self):
         """
         Open LSL EEG stream, can be invoked after `start_acquisition_data()`.
 
@@ -186,26 +187,26 @@ class iFocus(Thread):
         """
         if self.__status != iFocus.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
-        if hasattr(self, "_lsl_eeg"):
+        if self._lsl_emg is not None:
             raise Exception("LSL stream already opened.")
         from ..utils.lslWrapper import lslSender
 
-        self._lsl_eeg = lslSender(
-            self.dev_args["channel_eeg"],
+        self._lsl_emg = lslSender(
+            self.dev_args["channel_emg"],
             f"{self.dev_args['type']}EEG{self.dev_args['name'][-2:]}",
             "EEG",
-            self.dev_args["fs_eeg"],
+            self.dev_args["fs_emg"],
             with_trigger=False,
         )
-        self.__lsl_eeg_flag = True
+        self.__lsl_emg_flag = True
 
-    def close_lsl_eeg(self):
+    def close_lsl_emg(self):
         """
         Close LSL EEG stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
         """
-        self.__lsl_eeg_flag = False
-        if hasattr(self, "_lsl_eeg"):
-            del self._lsl_eeg
+        self.__lsl_emg_flag = False
+        if self._lsl_emg is not None:
+            self._lsl_emg = None
 
     def open_lsl_imu(self):
         """
@@ -218,7 +219,7 @@ class iFocus(Thread):
         """
         if self.__status != iFocus.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
-        if hasattr(self, "_lsl_imu"):
+        if self._lsl_imu is not None:
             raise Exception("LSL stream already opened.")
         from ..utils.lslWrapper import lslSender
 
@@ -237,8 +238,51 @@ class iFocus(Thread):
         Close LSL IMU stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
         """
         self.__lsl_imu_flag = False
-        if hasattr(self, "_lsl_imu"):
-            del self._lsl_imu
+        if self._lsl_imu is not None:
+            self._lsl_imu = None
+
+    def open_lsl_emg_imu(self):
+        """
+        Open LSL EMG and IMU stream, can be invoked after `start_acquisition_data()`.
+
+        Raises:
+            Exception: if data acquisition not started or LSL stream already opened.
+            LSLException: if LSL stream creation failed.
+            importError: if `pylsl` is not installed or liblsl not installed for unix like system.
+        """
+        if self.__status != iFocus.Dev.SIGNAL:
+            raise Exception("Data acquisition not started, please start first.")
+        if self._lsl_emg_imu is not None:
+            raise Exception("LSL stream already opened.")
+        from ..utils.lslWrapper import lslSender
+
+        key = 0
+        elctds = {}
+        for k, v in self.dev_args["channel_emg"].items():
+            elctds[key] = v
+            key += 1
+        for k, v in self.dev_args["channel_imu"].items():
+            elctds[key] = v
+            key += 1
+        self._lsl_emg_imu = lslSender(
+            elctds,
+            f"{self.dev_args['type']}EEG-IMU{self.dev_args['name'][-2:]}",
+            "EEG-IMU",
+            self.dev_args["fs_emg"] + self.dev_args["fs_imu"],
+            unit="degree",
+            with_trigger=False,
+        )
+        self.__lsl_emg_flag = True
+        self.__lsl_imu_flag = True
+
+    def close_lsl_emg_imu(self):
+        """
+        Close LSL EMG and IMU stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
+        """
+        self.__lsl_emg_flag = False
+        self.__lsl_imu_flag = False
+        if self._lsl_emg_imu is not None:
+            self._lsl_emg_imu = None
 
     def setIMUFlag(self, check):
         self.__enable_imu = check
@@ -259,24 +303,24 @@ class iFocus(Thread):
             raise Exception("Data acquisition not started")
         if self._bdf_file is not None:
             raise Exception("BDF file already created.")
-        from ..utils.bdfWrapper import bdfSaverEEG, bdfSaverEEGIMU
+        from ..utils.bdfWrapper import bdfSaverEMG, bdfSaverEMGIMU
 
         if filename[-4:].lower() != ".bdf":
             filename += ".bdf"
         if self.__enable_imu:
-            self._bdf_file = bdfSaverEEGIMU(
+            self._bdf_file = bdfSaverEMGIMU(
                 filename,
-                self.dev_args["channel_eeg"],
-                self.dev_args["fs_eeg"],
+                self.dev_args["channel_emg"],
+                self.dev_args["fs_emg"],
                 self.dev_args["channel_imu"],
                 self.dev_args["fs_imu"],
                 self.dev_args["type"],
             )
         else:
-            self._bdf_file = bdfSaverEEG(
+            self._bdf_file = bdfSaverEMG(
                 filename,
-                self.dev_args["channel_eeg"],
-                self.dev_args["fs_eeg"],
+                self.dev_args["channel_emg"],
+                self.dev_args["fs_emg"],
                 self.dev_args["type"],
             )
         self.__bdf_flag = True
@@ -327,23 +371,27 @@ class iFocus(Thread):
                     raise Exception("Data transmission timeout.")
                 ret = self.__parser.parse_data(data)
                 if ret:
-                    if self.__lsl_eeg_flag:
-                        self._lsl_eeg.push_chunk(
-                            [frame for frames in ret for frame in frames[:-1]]
-                        )
-                    if self.__lsl_imu_flag:
-                        self._lsl_imu.push_chunk([frame[-1] for frame in ret])
                     if self.__with_q:
                         self.__save_data.put(ret)
                     if self.__bdf_flag:
                         self._bdf_file.write_chunk(ret)
+                    if self.__lsl_emg_flag and not self.__lsl_imu_flag:
+                        self._lsl_emg.push_chunk(
+                            [frame for frames in ret for frame in frames[:-1]]
+                        )
+                    elif self.__lsl_imu_flag and not self.__lsl_emg_flag:
+                        self._lsl_imu.push_chunk([frame[-1] for frame in ret])
+                    elif self.__lsl_emg_flag and self.__lsl_imu_flag:
+                        self._lsl_emg_imu.push_chunk(
+                            [frame for frames in ret for frame in frames[:-1]] + [frame[-1] for frame in ret]
+                        )
             except Exception as e:
                 print(e)
                 self.__socket_flag = "Data transmission timeout."
                 self.__status = iFocus.Dev.TERMINATE_START
 
         # clear buffer
-        self.close_lsl_eeg()
+        self.close_lsl_emg()
         self.close_lsl_imu()
         self.close_bdf_file()
         # self.dev.stop_recv()

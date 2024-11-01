@@ -56,6 +56,8 @@ dev-dependencies = [
   "mkdocs-material>=9.5.25",
   "mkdocs-include-markdown-plugin>=6.2.1",
   "scipy>=1.14.0",
+  "pylsl",
+  "pyedflib",
 ]
 
 [tool.hatch.build]
