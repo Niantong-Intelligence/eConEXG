@@ -28,11 +28,11 @@ class com(Thread):
                     continue
                 display_name = f"iRe8-{serial_number[-1]}"
             elif "ir2" == serial_number[0].lower():
-                if not not CHANNELS['USB16']:
+                if not CHANNELS['USB16']:
                     continue
                 display_name = f"iRe16-{serial_number[-1]}"
             else:
-                if not not CHANNELS['USB32']:
+                if not CHANNELS['USB32']:
                     continue
                 display_name = f"iRe32-{serial_number[-1]}"
             if display_name not in self.added_devices.keys():
