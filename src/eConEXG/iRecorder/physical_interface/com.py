@@ -1,11 +1,9 @@
 import time
 from queue import Queue
 from threading import Thread
-from typing import Literal
-
 from serial.tools.list_ports import comports
 
-CHANNELS: Literal["USB8", "USB16", "USB32"] = "USB32"
+CHANNELS = {'USB8': False, 'USB16': False, 'USB32': False}
 
 
 class com(Thread):
@@ -25,16 +23,16 @@ class com(Thread):
             if not (device.pid == 0x5740 and device.vid == 0x0483):
                 continue
             serial_number = device.serial_number.split("_")
-            if CHANNELS == "USB8":
-                if "ir1" != serial_number[0].lower():
+            if "ir1" == serial_number[0].lower():
+                if not CHANNELS['USB8']:
                     continue
                 display_name = f"iRe8-{serial_number[-1]}"
-            elif CHANNELS == "USB16":
-                if "ir2" != serial_number[0].lower():
+            elif "ir2" == serial_number[0].lower():
+                if not not CHANNELS['USB16']:
                     continue
                 display_name = f"iRe16-{serial_number[-1]}"
-            elif CHANNELS == "USB32":
-                if serial_number[0].lower() in ["ir1", "ir2"]:
+            else:
+                if not not CHANNELS['USB32']:
                     continue
                 display_name = f"iRe32-{serial_number[-1]}"
             if display_name not in self.added_devices.keys():

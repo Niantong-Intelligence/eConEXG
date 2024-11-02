@@ -6,7 +6,7 @@ def get_interface(TYPE):
             from .bt import bt as phy_interface
             from . import bt
 
-            bt.CHANNELS = TYPE
+            bt.CHANNELS[TYPE] = True
         else:
             raise NotImplementedError("Unsupported platform")
 
@@ -24,7 +24,7 @@ def get_interface(TYPE):
         from .com import com as phy_interface
         from . import com
 
-        com.CHANNELS = TYPE
+        com.CHANNELS[TYPE] = True
     else:
         raise NotImplementedError("Unsupported interface type")
     return phy_interface

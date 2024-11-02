@@ -1,10 +1,9 @@
 from queue import Queue
 from threading import Thread
-from typing import Literal
 
 from . import bluetooth
 
-CHANNELS: Literal["W8", "W16"] = "W16"
+CHANNELS = {"W8": False, "W16": False}
 
 
 class bt(Thread):
@@ -36,11 +35,11 @@ class bt(Thread):
             for device in nearby_devices:
                 addr = device[0]
                 name = device[1]
-                if CHANNELS == "W16":
-                    if "iRecorder-" not in name:
+                if "iRecorder-" not in name:
+                    if not CHANNELS["W16"]:
                         continue
-                elif CHANNELS == "W8":
-                    if "iRecorder8-" not in name:
+                if "iRecorder8-" not in name:
+                    if not CHANNELS["W8"]:
                         continue
                 if name not in added_devices:
                     added_devices.add(name)

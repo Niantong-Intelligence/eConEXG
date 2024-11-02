@@ -231,22 +231,22 @@ class iRecorder(Thread):
         ch_idx = [i for i in channels.keys()]
         self.__parser._update_chs(ch_idx)
 
-    def start_acquisition_data(self, mod: int = 0):
+    def start_acquisition_data(self, with_q: bool = True):
         """
         Send data acquisition command to device, block until data acquisition started or failed.
 
         Args:
-            mod: if 0, signal data will be stored in a queue and **should** be acquired by calling `get_data()` in a loop in case data queue is full.
-                if 1, data will be passed to out of class functions directly, which is more efficient in multithread and multiprocess(with shared memory).
+            with_q: if True, signal data will be stored in a queue and **should** be acquired by calling `get_data()` in a loop in case data queue is full.
+                if False, data will be passed to out of class functions directly, which is more efficient in multithread and multiprocess(with shared memory).
                 data can also be acquired through `open_lsl_stream` and `save_bdf_file`.
 
         Raises:
             Exception: if device not connected or data acquisition init failed.
         """
         self.__check_dev_status()
-        if mod == 0:
+        if with_q:
             self.__with_q, self.__with_process = True, False
-        elif mod == 1:
+        else:
             self.__with_q, self.__with_process = False, True
         if self.__status == iRecorder.Dev.SIGNAL:
             return
