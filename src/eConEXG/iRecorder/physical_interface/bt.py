@@ -1,15 +1,15 @@
 from queue import Queue
 from threading import Thread
+from typing import Literal
 
 from . import bluetooth
 
-CHANNELS = {"W8": False, "W16": False}
-
 
 class bt(Thread):
-    def __init__(self, device_queue: Queue):
+    def __init__(self, dev_type: Literal["W8", "W16"], device_queue: Queue):
         super().__init__(daemon=True)
         self.device_queue = device_queue
+        self.dev_type = dev_type
         self.__search_flag = True
         self.__interface = self.validate_interface()
 
@@ -35,11 +35,11 @@ class bt(Thread):
             for device in nearby_devices:
                 addr = device[0]
                 name = device[1]
-                if "iRecorder-" not in name:
-                    if not CHANNELS["W16"]:
+                if self.dev_type == "W16":
+                    if "iRecorder-" not in name:
                         continue
-                if "iRecorder8-" not in name:
-                    if not CHANNELS["W8"]:
+                elif self.dev_type == "W8":
+                    if "iRecorder8-" not in name:
                         continue
                 if name not in added_devices:
                     added_devices.add(name)

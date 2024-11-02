@@ -52,7 +52,7 @@ class iRecorder(Thread):
 
         self.__parser = Parser(self.__dev_args["channel"])
         self.filter = SignalFilter(self.__dev_args["channel"], None)
-        self.__interface = get_interface(dev_type)(self.__info_q)
+        self.__interface = get_interface(dev_type, self.__info_q)
         self.__dev_sock = get_sock(dev_type)
         self.__dev_args.update({"AdapterInfo": self.__interface.interface})
 
