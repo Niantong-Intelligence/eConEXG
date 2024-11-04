@@ -23,10 +23,7 @@ class iRecorder(Thread):
         TERMINATE = 40  # Init state
         TERMINATE_START = 41
 
-    def __init__(
-            self,
-            dev_type: str
-    ):
+    def __init__(self, dev_type: str):
         """
         Args:
             dev_type: iRecorder device type. available options: Literal["W8", "USB8", "W16", "USB16", "W32", "USB32"]
@@ -276,7 +273,7 @@ class iRecorder(Thread):
             raise e
 
     def get_data(
-            self, timeout: Optional[float] = 0.02
+        self, timeout: Optional[float] = 0.02
     ) -> Optional[list[Optional[list]]]:
         """
         Acquire all available data, make sure this function is called in a loop when `with_q` is set to `True` in`start_acquisition_data()`

@@ -56,14 +56,14 @@ class SignalFilter:
 
     def l_filter(self, data: np.ndarray):
         if self.notch is not None:
-            data[self.start: self.end, :], self.zin = lfilter(
-                self.bn, self.an, data[self.start: self.end, :], axis=1, zi=self.zin
+            data[self.start : self.end, :], self.zin = lfilter(
+                self.bn, self.an, data[self.start : self.end, :], axis=1, zi=self.zin
             )
         if self.highpass is not None:
-            data[self.start: self.end, :], self.zih = lfilter(
-                self.bh, self.ah, data[self.start: self.end, :], axis=1, zi=self.zih
+            data[self.start : self.end, :], self.zih = lfilter(
+                self.bh, self.ah, data[self.start : self.end, :], axis=1, zi=self.zih
             )
         if self.lowpass is not None:
-            data[self.start: self.end, :], self.zil = lfilter(
-                self.bl, self.al, data[self.start: self.end, :], axis=1, zi=self.zil
+            data[self.start : self.end, :], self.zil = lfilter(
+                self.bl, self.al, data[self.start : self.end, :], axis=1, zi=self.zil
             )

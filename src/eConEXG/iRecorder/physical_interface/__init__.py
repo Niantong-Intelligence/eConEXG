@@ -4,6 +4,7 @@ def get_interface(dev_type, queue):
     if dev_type in ["W8", "W16"]:
         if system() == "Windows":
             from .bt import bt
+
             return bt(dev_type, queue)
         else:
             raise NotImplementedError("Unsupported platform")

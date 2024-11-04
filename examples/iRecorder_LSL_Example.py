@@ -3,14 +3,14 @@ from pylsl import StreamInfo, StreamOutlet, cf_double64
 
 class lslSender(StreamOutlet):
     def __init__(
-            self,
-            elctds: dict = {},
-            dev="eConEEG",
-            devtype="EEG",
-            fs=500,
-            with_trigger=True,
-            unit="microvolts",
-            precision=cf_double64,
+        self,
+        elctds: dict = {},
+        dev="eConEEG",
+        devtype="EEG",
+        fs=500,
+        with_trigger=True,
+        unit="microvolts",
+        precision=cf_double64,
     ):
         info = StreamInfo(
             name=dev,
@@ -42,7 +42,7 @@ class lslSender(StreamOutlet):
 if __name__ == "__main__":
     # test
     lsl_stream = lslSender(
-        {0: 'CH0', 1: 'CH1', 2: 'CH2', 3: 'CH3'},
+        {0: "CH0", 1: "CH1", 2: "CH2", 3: "CH3"},
         f"iRe32-000000000",
         "EEG",
         2000,  # 有线2k，无线500

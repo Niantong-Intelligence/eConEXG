@@ -383,7 +383,8 @@ class iFocus(Thread):
                         self._lsl_imu.push_chunk([frame[-1] for frame in ret])
                     elif self.__lsl_emg_flag and self.__lsl_imu_flag:
                         self._lsl_emg_imu.push_chunk(
-                            [frame for frames in ret for frame in frames[:-1]] + [frame[-1] for frame in ret]
+                            [frame for frames in ret for frame in frames[:-1]]
+                            + [frame[-1] for frame in ret]
                         )
             except Exception as e:
                 print(e)
