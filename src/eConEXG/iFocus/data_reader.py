@@ -393,6 +393,7 @@ class iFocus(Thread):
         # clear buffer
         self.close_lsl_emg()
         self.close_lsl_imu()
+        self.close_lsl_emg_imu()
         self.close_bdf_file()
         # self.dev.stop_recv()
         self.__parser.clear_buffer()
