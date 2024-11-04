@@ -414,6 +414,7 @@ class eConAlpha(Thread):
         # clear buffer
         self.close_lsl_eeg()
         self.close_lsl_imu()
+        self.close_lsl_emg_imu()
         self.close_bdf_file()
         # self.dev.stop_recv()
         self.__parser.clear_buffer()
