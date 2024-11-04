@@ -7,7 +7,6 @@ from queue import Queue
 from threading import Thread
 from typing import Optional
 
-from ..utils.filter import SignalFilter
 from .data_parser import Parser
 from .physical_interface import get_interface, get_sock
 
@@ -40,7 +39,7 @@ class iRecorder(Thread):
         self.__with_process = False
         self.__error_message = "Device not connected, please connect first."
         self.__save_data = Queue()
-        self.__update_func = []
+        self.__update_func = None
         self.__status = iRecorder.Dev.TERMINATE
         self.__lsl_flag = False
         self.__bdf_flag = False
@@ -48,7 +47,6 @@ class iRecorder(Thread):
         self.__dev_args.update({"channel": self.__get_chs()})
 
         self.__parser = Parser(self.__dev_args["channel"])
-        self.filter = SignalFilter(self.__dev_args["channel"], None)
         self.__interface = get_interface(dev_type, self.__info_q)
         self.__dev_sock = get_sock(dev_type)
         self.__dev_args.update({"AdapterInfo": self.__interface.interface})
@@ -176,7 +174,6 @@ class iRecorder(Thread):
             fs = default
         self.__dev_args.update({"fs": fs})
         self.__parser._update_fs(fs)
-        self.filter.fs = fs
         if self.dev is not None:
             self.dev.set_fs(fs)
 
@@ -254,23 +251,14 @@ class iRecorder(Thread):
             time.sleep(0.01)
         self.__check_dev_status()
 
-    def add_update_functions(self, funcs: list = None) -> None:
+    def set_update_functions(self, function=None) -> None:
         """
-        Add out of class functions, while can be used in __process_data() method
+        set the out of class function, invoked automatically tp process data when self.__with_process is True.
 
         Args:
-            funcs: list of functions to add.
+            function: The target function
         """
-        self.__update_func += funcs
-
-    def __process_data(self, data: np.ndarray = None) -> None:
-        if data is None:
-            return
-        try:
-            for func in self.__update_func:
-                func(data)
-        except Exception as e:
-            raise e
+        self.__update_func = function
 
     def get_data(
         self, timeout: Optional[float] = 0.02
@@ -526,8 +514,7 @@ class iRecorder(Thread):
                     elif self.__with_process:
                         ret_array = np.array(ret).T
                         if ret_array.size > 0:
-                            self.filter.l_filter(ret_array)
-                            self.__process_data(ret_array)
+                            self.__update_func(ret_array)
                     if self.__bdf_flag:
                         self._bdf_file.write_chunk(ret)
                     if self.__lsl_flag:
