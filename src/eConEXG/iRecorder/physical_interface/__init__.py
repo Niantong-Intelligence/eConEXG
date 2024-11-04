@@ -1,33 +1,30 @@
-def get_interface(TYPE):
+def get_interface(dev_type, queue):
     from platform import system
 
-    if TYPE in ["W8", "W16"]:
+    if dev_type in ["W8", "W16"]:
         if system() == "Windows":
-            from .bt import bt as phy_interface
-            from . import bt
-
-            bt.CHANNELS = TYPE
+            from .bt import bt
+            return bt(dev_type, queue)
         else:
             raise NotImplementedError("Unsupported platform")
 
-    elif TYPE in ["W32"]:
+    elif dev_type in ["W32"]:
         if system() == "Windows":
-            from .wifi_windows import wifiWindows as phy_interface
+            from .wifi_windows import wifiWindows as wifiInterface
         elif system() == "Darwin":
-            from .wifi_macos import wifiMACOS as phy_interface
+            from .wifi_macos import wifiMACOS as wifiInterface
         elif system() == "Linux":
-            from .wifi_linux import wifiLinux as phy_interface
+            from .wifi_linux import wifiLinux as wifiInterface
         else:
             raise NotImplementedError("Unsupported platform")
+        return wifiInterface(queue)
 
-    elif "USB" in TYPE:
-        from .com import com as phy_interface
-        from . import com
+    elif "USB" in dev_type:
+        from .com import com
 
-        com.CHANNELS = TYPE
+        return com(dev_type, queue)
     else:
         raise NotImplementedError("Unsupported interface type")
-    return phy_interface
 
 
 def get_sock(TYPE):

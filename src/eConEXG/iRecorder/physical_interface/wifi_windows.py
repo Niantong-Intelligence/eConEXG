@@ -9,7 +9,7 @@ from traceback import print_exc
 
 
 class wifiWindows(Thread):
-    def __init__(self, device_queue: Queue) -> str:
+    def __init__(self, device_queue: Queue):
         super().__init__(daemon=True)
         self.device_queue = device_queue
         self.port = 4321

@@ -19,8 +19,8 @@ print(dev.get_dev_info())
 dev.start_acquisition_data()
 
 """Open lsl streams for EEG and IMU data"""
-# dev.open_lsl_eeg()
-# dev.open_lsl_imu()
+dev.open_lsl_eeg()
+dev.open_lsl_imu()
 
 count = 0
 first_packet = None
