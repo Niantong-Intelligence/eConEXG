@@ -6,7 +6,9 @@ from typing import Literal
 
 
 class com(Thread):
-    def __init__(self, dev_type: Literal["USB8", "USB16", "USB32"], device_queue: Queue):
+    def __init__(
+        self, dev_type: Literal["USB8", "USB16", "USB32"], device_queue: Queue
+    ):
         super().__init__(daemon=True)
         self.dev_type = dev_type
         self.device_queue = device_queue
