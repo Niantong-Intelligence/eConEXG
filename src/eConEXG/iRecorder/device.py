@@ -24,8 +24,8 @@ class iRecorder(Thread):
         TERMINATE_START = 41
 
     def __init__(
-        self,
-        dev_type: str
+            self,
+            dev_type: str
     ):
         """
         Args:
@@ -266,7 +266,7 @@ class iRecorder(Thread):
         """
         self.__update_func += funcs
 
-    def __process_data(self, data=None) -> None:
+    def __process_data(self, data: np.ndarray = None) -> None:
         """
         Process data by signal filtering. After that, call out of class functions to use the data.
 
@@ -285,7 +285,7 @@ class iRecorder(Thread):
             raise e
 
     def get_data(
-        self, timeout: Optional[float] = 0.02
+            self, timeout: Optional[float] = 0.02
     ) -> Optional[list[Optional[list]]]:
         """
         Acquire all available data, make sure this function is called in a loop when `with_q` is set to `True` in`start_acquisition_data()`

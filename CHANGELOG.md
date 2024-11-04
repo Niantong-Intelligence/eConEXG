@@ -3,6 +3,12 @@
 This file contains tracks the changes landing in eConEXG. 
 <!-- released start -->
 
+### 0.1.20
+
+* **Fix** bug where multiple devices of different type cannot be connected simultaneously
+* **Fix** bug where LSL stream cannot simultaneously transmit EMG and IMU data
+* **Add** a new data transmitted policy. data passed directly without through queue, which is more efficient
+
 ## 0.1.18
 
 Release on 2024-10-10
