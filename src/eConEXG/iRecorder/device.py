@@ -267,15 +267,6 @@ class iRecorder(Thread):
         self.__update_func += funcs
 
     def __process_data(self, data: np.ndarray = None) -> None:
-        """
-        Process data by signal filtering. After that, call out of class functions to use the data.
-
-        Args:
-            data: ndarray type, store eeg signal data.
-
-        Raises:
-            Exception: exceptions from out of class functions while handling the data
-        """
         if data is None:
             return
         try:
