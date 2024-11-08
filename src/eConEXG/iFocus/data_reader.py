@@ -56,7 +56,6 @@ class iFocus(Thread):
         self.__socket_flag = None
         self._lsl_emg = None
         self._lsl_imu = None
-        self._lsl_emg_imu = None
         self.__lsl_imu_flag = False
         self.__lsl_emg_flag = False
         self._bdf_file = None
@@ -241,49 +240,6 @@ class iFocus(Thread):
         if self._lsl_imu is not None:
             self._lsl_imu = None
 
-    def open_lsl_emg_imu(self):
-        """
-        Open LSL EMG and IMU stream, can be invoked after `start_acquisition_data()`.
-
-        Raises:
-            Exception: if data acquisition not started or LSL stream already opened.
-            LSLException: if LSL stream creation failed.
-            importError: if `pylsl` is not installed or liblsl not installed for unix like system.
-        """
-        if self.__status != iFocus.Dev.SIGNAL:
-            raise Exception("Data acquisition not started, please start first.")
-        if self._lsl_emg_imu is not None:
-            raise Exception("LSL stream already opened.")
-        from ..utils.lslWrapper import lslSender
-
-        key = 0
-        elctds = {}
-        for k, v in self.dev_args["channel_eeg"].items():
-            elctds[key] = v
-            key += 1
-        for k, v in self.dev_args["channel_imu"].items():
-            elctds[key] = v
-            key += 1
-        self._lsl_emg_imu = lslSender(
-            elctds,
-            f"{self.dev_args['type']}EEG-IMU{self.dev_args['name'][-2:]}",
-            "EEG-IMU",
-            self.dev_args["fs_eeg"] + self.dev_args["fs_imu"],
-            unit="degree",
-            with_trigger=False,
-        )
-        self.__lsl_emg_flag = True
-        self.__lsl_imu_flag = True
-
-    def close_lsl_emg_imu(self):
-        """
-        Close LSL EMG and IMU stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
-        """
-        self.__lsl_emg_flag = False
-        self.__lsl_imu_flag = False
-        if self._lsl_emg_imu is not None:
-            self._lsl_emg_imu = None
-
     def setIMUFlag(self, check):
         self.__enable_imu = check
 
@@ -375,17 +331,12 @@ class iFocus(Thread):
                         self.__save_data.put(ret)
                     if self.__bdf_flag:
                         self._bdf_file.write_chunk(ret)
-                    if self.__lsl_emg_flag and not self.__lsl_imu_flag:
+                    if self.__lsl_emg_flag:
                         self._lsl_emg.push_chunk(
                             [frame for frames in ret for frame in frames[:-1]]
                         )
-                    elif self.__lsl_imu_flag and not self.__lsl_emg_flag:
+                    if self.__lsl_imu_flag:
                         self._lsl_imu.push_chunk([frame[-1] for frame in ret])
-                    elif self.__lsl_emg_flag and self.__lsl_imu_flag:
-                        self._lsl_emg_imu.push_chunk(
-                            [frame for frames in ret for frame in frames[:-1]]
-                            + [frame[-1] for frame in ret]
-                        )
             except Exception as e:
                 print(e)
                 self.__socket_flag = "Data transmission timeout."
@@ -394,7 +345,6 @@ class iFocus(Thread):
         # clear buffer
         self.close_lsl_emg()
         self.close_lsl_imu()
-        self.close_lsl_emg_imu()
         self.close_bdf_file()
         # self.dev.stop_recv()
         self.__parser.clear_buffer()
