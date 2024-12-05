@@ -9,6 +9,7 @@ from typing import Optional
 
 from .data_parser import Parser
 from .physical_interface import get_interface, get_sock
+from ..utils.ArrayQueue import NPQueue
 
 
 class iRecorder(Thread):
@@ -34,17 +35,18 @@ class iRecorder(Thread):
             raise ValueError("Unsupported device type.")
         super().__init__(daemon=True, name=f"iRecorder {dev_type}")
         self.handler = None
-        self.__info_q = Queue(128)
-        self.__with_q = True
-        self.__with_process = False
         self.__error_message = "Device not connected, please connect first."
-        self.__save_data = Queue()
         self.__update_func = None
         self.__status = iRecorder.Dev.TERMINATE
         self.__lsl_flag = False
         self.__bdf_flag = False
         self.__dev_args = {"type": dev_type}
         self.__dev_args.update({"channel": self.__get_chs()})
+
+        self.__save_data = NPQueue(ch_len=self.__dev_args["channel"])
+        self.__info_q = Queue(128)
+        self.__with_q = True
+        self.__with_process = False
 
         self.__parser = Parser(self.__dev_args["channel"])
         self.__interface = get_interface(dev_type, self.__info_q)
