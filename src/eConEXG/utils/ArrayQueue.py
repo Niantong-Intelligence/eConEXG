@@ -2,7 +2,7 @@ import numpy as np
 
 
 class NPQueue:
-    def __init__(self,  ch_len: int = 32, data_len: int = 8000 * 60):
+    def __init__(self,  ch_len: int = 32, data_len: int = 8000):
         self.__array = np.zeros((data_len, ch_len), dtype=np.float64)
         self.__data_len = data_len
         self.__ch_len = ch_len
