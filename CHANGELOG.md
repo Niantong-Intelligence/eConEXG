@@ -1,7 +1,7 @@
 # Changelog
 
 This file contains tracks the changes landing in eConEXG. 
-<!-- released start -->
+{% include "CHANGELOG.md" start="<!-- released start -->" %}
 
 ### 0.1.22
 * **Change** data structure `__save_data` in iRecorder form normal queue.Queue to numpy.Array
