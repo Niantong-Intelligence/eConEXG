@@ -1,11 +1,14 @@
 import queue
 import time
+
+import numpy
 import numpy as np
+import traceback
 from copy import deepcopy
 from enum import Enum
 from queue import Queue
 from threading import Thread
-from typing import Optional
+from typing import Optional, Callable
 
 from .data_parser import Parser
 from .physical_interface import get_interface, get_sock
@@ -36,7 +39,6 @@ class iRecorder(Thread):
         self.handler = None
         self.__info_q = Queue(128)
         self.__with_q = True
-        self.__with_process = False
         self.__error_message = "Device not connected, please connect first."
         self.__save_data = Queue()
         self.__update_func = None
@@ -231,17 +233,14 @@ class iRecorder(Thread):
 
         Args:
             with_q: if True, signal data will be stored in a queue and **should** be acquired by calling `get_data()` in a loop in case data queue is full.
-                if False, data will be passed to out of class functions directly, which is more efficient in multithread and multiprocess(with shared memory).
+                if False and __update_func has been set up, data will be passed this functions directly, which is more efficient in multithread and multiprocess(with shared memory).
                 data can also be acquired through `open_lsl_stream` and `save_bdf_file`.
 
         Raises:
             Exception: if device not connected or data acquisition init failed.
         """
         self.__check_dev_status()
-        if with_q:
-            self.__with_q, self.__with_process = True, False
-        else:
-            self.__with_q, self.__with_process = False, True
+        self.__with_q = with_q
         if self.__status == iRecorder.Dev.SIGNAL:
             return
         if self.__status == iRecorder.Dev.IMPEDANCE:
@@ -251,9 +250,9 @@ class iRecorder(Thread):
             time.sleep(0.01)
         self.__check_dev_status()
 
-    def set_update_functions(self, function=None) -> None:
+    def set_update_functions(self, function: Callable[[numpy.array], None] = None) -> None:
         """
-        set the out of class function, invoked automatically tp process data when self.__with_process is True.
+        set the out of class function, invoked automatically tp process data when self.__with_q is False.
 
         Args:
             function: The target function
@@ -511,7 +510,7 @@ class iRecorder(Thread):
                 if ret:
                     if self.__with_q:
                         self.__save_data.put(ret)
-                    elif self.__with_process:
+                    elif isinstance(self.__update_func, Callable):
                         ret_array = np.array(ret).T
                         if ret_array.size > 0:
                             self.__update_func(ret_array)
@@ -520,6 +519,7 @@ class iRecorder(Thread):
                     if self.__lsl_flag:
                         self._lsl_stream.push_chunk(ret)
             except Exception:
+                traceback.print_exc()
                 if (self.__dev_args["type"] == "W32") and (retry < 1):
                     try:
                         print("Wi-Fi reconnecting...")
@@ -542,6 +542,7 @@ class iRecorder(Thread):
             try:  # stop data acquisition when thread ended
                 self.dev.stop_recv()
             except Exception:
+                traceback.print_exc()
                 if self.__status == iRecorder.Dev.IDLE_START:
                     self.__error_message = "Device connection lost."
                 self.__status = iRecorder.Dev.TERMINATE_START
@@ -558,6 +559,7 @@ class iRecorder(Thread):
                 timestamp = time.time()
                 # print("Ah, ah, ah, ah\nStayin' alive, stayin' alive")
             except Exception:
+                traceback.print_exc()
                 self.__error_message = "Device connection lost."
                 self.__status = iRecorder.Dev.TERMINATE_START
 
