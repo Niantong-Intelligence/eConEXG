@@ -2,7 +2,7 @@ site_name: eConEXG
 site_description: SDK for Niantong devices.
 repo_name: Niantong-Intelligence/eConEXG
 repo_url: https://github.com/Niantong-Intelligence/eConEXG
-copyright: Copyright &copy; 2024 <a href=http://econtek.cn/>Niantong Intelligence Technology Co., Ltd.</a>
+copyright: Copyright &copy; 2024 <a href=https://econtek.cn/>Niantong Intelligence Technology Co., Ltd.</a>
 
 nav:
   - Home: index.md
