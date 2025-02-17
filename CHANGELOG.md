@@ -3,6 +3,10 @@
 This file contains tracks the changes landing in eConEXG. 
 <!-- released start -->
 
+### 0.1.22
+* **Change** data structure `__save_data` in iRecorder form normal queue.Queue to numpy.Array
+* **Change** the bytes-to-integer function in iRecorder.data_parser form int.from-bytes to call a DLL file compiled in C language
+
 ### 0.1.20
 
 * **Fix** bug where multiple devices of different type cannot be connected simultaneously

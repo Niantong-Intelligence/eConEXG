@@ -1,13 +1,13 @@
 import time
 import queue
+import traceback
 from queue import Queue
 from threading import Thread
 from typing import Optional
 from enum import Enum
+from copy import deepcopy
 from .data_parser import Parser
 from .device_socket import sock
-import traceback
-from copy import deepcopy
 
 
 class eConAlpha(Thread):
@@ -82,7 +82,7 @@ class eConAlpha(Thread):
         Change the sampling frequency of iFocus.
 
         Args:
-            fs_emg: sampling frequency of eeg data, should be 250, 500, 1000 or 2000.
+            fs_emg: sampling frequency of emg data, should be 250, 500, 1000 or 2000.
                 fs_imu will be automatically set to 1/8 of fs_emg.
 
         Raises:
@@ -108,10 +108,10 @@ class eConAlpha(Thread):
         Returns:
             A dictionary containing device information, which includes:
                 `type`: hardware type;
-                `channel_emg`: channel dictionary, including EEG channel index and name;
+                `channel_emg`: channel dictionary, including EMG channel index and name;
                 `channel_imu`: channel dictionary, including IMU channel index and name;
                 `AdapterInfo`: adapter used for connection;
-                `fs_emg`: sample frequency of EEG in Hz;
+                `fs_emg`: sample frequency of EMG in Hz;
                 `fs_imu`: sample frequency of IMU in Hz;
         """
         return deepcopy(self.dev_args)
@@ -139,7 +139,7 @@ class eConAlpha(Thread):
             timeout: Non-negative value, blocks at most 'timeout' seconds and return, if set to `None`, blocks until new data available.
 
         Returns:
-            A list of frames, each frame is made up of 5 eeg data and 1 imu data in a shape as below:
+            A list of frames, each frame is made up of 5 emg data and 1 imu data in a shape as below:
                 [[`emg_ch0_0,...,emg_ch8_0`],..., [`emg_ch0_7,...,emg_ch8_7`], [`acc_x`, `acc_y`, `acc_z`,`gry_x`,`gry_y`,`gry_z`]],
                     in which number `0~4` after `_` indicates the time order of channel data.
 
@@ -147,7 +147,7 @@ class eConAlpha(Thread):
             Exception: if device not connected, connection failed, data transmission timeout/init failed, or unknown error.
 
         Data Unit:
-            - eeg: µV
+            - emg: µV
             - acc: mg
             - gry: bps
         """
@@ -201,7 +201,7 @@ class eConAlpha(Thread):
         """
         if self.__status != eConAlpha.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
-        if hasattr(self, "_lsl_eeg"):
+        if hasattr(self, "_lsl_emg"):
             raise Exception("LSL stream already opened.")
         from ..utils.lslWrapper import lslSender
 
@@ -214,12 +214,12 @@ class eConAlpha(Thread):
         )
         self.__lsl_emg_flag = True
 
-    def close_lsl_eeg(self):
+    def close_lsl_emg(self):
         """
         Close LSL EMG stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
         """
         self.__lsl_emg_flag = False
-        if hasattr(self, "_lsl_eeg"):
+        if hasattr(self, "_lsl_emg"):
             del self._lsl_emg
 
     def open_lsl_imu(self):
@@ -254,49 +254,6 @@ class eConAlpha(Thread):
         self.__lsl_imu_flag = False
         if hasattr(self, "_lsl_imu"):
             del self._lsl_imu
-
-    def open_lsl_emg_imu(self):
-        """
-        Open LSL EMG and IMU stream, can be invoked after `start_acquisition_data()`.
-
-        Raises:
-            Exception: if data acquisition not started or LSL stream already opened.
-            LSLException: if LSL stream creation failed.
-            importError: if `pylsl` is not installed or liblsl not installed for unix like system.
-        """
-        if self.__status != eConAlpha.Dev.SIGNAL:
-            raise Exception("Data acquisition not started, please start first.")
-        if hasattr(self, "_lsl_emg_imu"):
-            raise Exception("LSL stream already opened.")
-        from ..utils.lslWrapper import lslSender
-
-        key = 0
-        elctds = {}
-        for k, v in self.dev_args["channel_emg"].items():
-            elctds[key] = v
-            key += 1
-        for k, v in self.dev_args["channel_imu"].items():
-            elctds[key] = v
-            key += 1
-        self._lsl_emg_imu = lslSender(
-            elctds,
-            f"{self.dev_args['type']}EEG-IMU{self.dev_args['name'][-2:]}",
-            "EEG-IMU",
-            self.dev_args["fs_emg"] + self.dev_args["fs_imu"],
-            unit="degree",
-            with_trigger=False,
-        )
-        self.__lsl_emg_flag = True
-        self.__lsl_imu_flag = True
-
-    def close_lsl_emg_imu(self):
-        """
-        Close LSL EMG and IMU stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
-        """
-        self.__lsl_emg_flag = False
-        self.__lsl_imu_flag = False
-        if hasattr(self, "_lsl_emg_imu"):
-            del self._lsl_emg_imu
 
     def setIMUFlag(self, check):
         self.__enable_imu = check
@@ -395,26 +352,20 @@ class eConAlpha(Thread):
                         self.__save_data.put(ret)
                     if self.__bdf_flag:
                         self._bdf_file.write_chunk(ret)
-                    if self.__lsl_emg_flag and not self.__lsl_imu_flag:
+                    if self.__lsl_emg_flag:
                         self._lsl_emg.push_chunk(
                             [frame for frames in ret for frame in frames[:-1]]
                         )
-                    elif self.__lsl_imu_flag and not self.__lsl_emg_flag:
+                    if self.__lsl_imu_flag:
                         self._lsl_imu.push_chunk([frame[-1] for frame in ret])
-                    elif self.__lsl_emg_flag and self.__lsl_imu_flag:
-                        self._lsl_emg_imu.push_chunk(
-                            [frame for frames in ret for frame in frames[:-1]]
-                            + [frame[-1] for frame in ret]
-                        )
-            except Exception as e:
-                print(e)
+            except Exception:
+                traceback.print_exc()
                 self.__socket_flag = "Data transmission timeout."
                 self.__status = eConAlpha.Dev.TERMINATE_START
 
         # clear buffer
-        self.close_lsl_eeg()
+        self.close_lsl_emg()
         self.close_lsl_imu()
-        self.close_lsl_emg_imu()
         self.close_bdf_file()
         # self.dev.stop_recv()
         self.__parser.clear_buffer()
@@ -426,6 +377,7 @@ class eConAlpha(Thread):
             try:  # stop data acquisition when thread ended
                 self.dev.stop_recv()
             except Exception:
+                traceback.print_exc()
                 if self.__status == eConAlpha.Dev.IDLE_START:
                     self.__socket_flag = "Connection lost."
                 self.__status = eConAlpha.Dev.TERMINATE_START
