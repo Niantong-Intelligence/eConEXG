@@ -48,7 +48,6 @@ class iRecorder(Thread):
         self.__save_data = NPQueue(ch_len=self.__dev_args["channel"])
         self.__info_q = Queue(128)
         self.__with_q = True
-        self.__with_process = False
 
         self.__parser = Parser(self.__dev_args["channel"])
         self.__interface = get_interface(dev_type, self.__info_q)
@@ -235,17 +234,15 @@ class iRecorder(Thread):
 
         Args:
             with_q: if True, signal data will be stored in a queue and **should** be acquired by calling `get_data()` in a loop in case data queue is full.
-                if False, data will be passed to out of class functions directly, which is more efficient in multithread and multiprocess(with shared memory).
+                if with_q is False, data can be passed to an out of class functions directly, if the function is set up, which is more efficient in multithread programs.
+                In multiprocess programs, with_q = True is more recommended.
                 data can also be acquired through `open_lsl_stream` and `save_bdf_file`.
 
         Raises:
             Exception: if device not connected or data acquisition init failed.
         """
         self.__check_dev_status()
-        if with_q:
-            self.__with_q, self.__with_process = True, False
-        else:
-            self.__with_q, self.__with_process = False, True
+        self.__with_q = with_q
         if self.__status == iRecorder.Dev.SIGNAL:
             return
         if self.__status == iRecorder.Dev.IMPEDANCE:
@@ -257,7 +254,7 @@ class iRecorder(Thread):
 
     def set_update_functions(self, function: Callable[[numpy.array], None] = None) -> None:
         """
-        set the out of class function, invoked automatically tp process data when self.__with_process is True.
+        set the out of class function, invoked automatically tp process data when self.__with_q is False.
 
         Args:
             function: The target function
@@ -290,8 +287,11 @@ class iRecorder(Thread):
         if self.__status != iRecorder.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
         data: list = self.__save_data.get()
-        while not self.__save_data.empty():
-            data.extend(self.__save_data.get())
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            if not self.__save_data.empty():
+                break
+        data.extend(self.__save_data.get())
         return data
 
     def stop_acquisition(self) -> None:
@@ -512,7 +512,7 @@ class iRecorder(Thread):
                 if ret:
                     if self.__with_q:
                         self.__save_data.put(ret)
-                    elif self.__with_process:
+                    elif isinstance(self.__update_func, Callable):
                         ret_array = np.array(ret).T
                         if ret_array.size > 0:
                             self.__update_func(ret_array)
