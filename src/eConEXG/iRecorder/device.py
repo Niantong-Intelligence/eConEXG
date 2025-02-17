@@ -1,11 +1,13 @@
-import queue
 import time
+
+import numpy
 import numpy as np
 from copy import deepcopy
 from enum import Enum
 from queue import Queue
 from threading import Thread
-from typing import Optional
+from typing import Optional, Callable
+import traceback
 
 from .data_parser import Parser
 from .physical_interface import get_interface, get_sock
@@ -253,7 +255,7 @@ class iRecorder(Thread):
             time.sleep(0.01)
         self.__check_dev_status()
 
-    def set_update_functions(self, function=None) -> None:
+    def set_update_functions(self, function: Callable[[numpy.array], None] = None) -> None:
         """
         set the out of class function, invoked automatically tp process data when self.__with_process is True.
 
@@ -263,7 +265,7 @@ class iRecorder(Thread):
         self.__update_func = function
 
     def get_data(
-        self, timeout: Optional[float] = 0.02
+            self, timeout: Optional[float] = 0.02
     ) -> Optional[list[Optional[list]]]:
         """
         Acquire all available data, make sure this function is called in a loop when `with_q` is set to `True` in`start_acquisition_data()`
@@ -287,10 +289,7 @@ class iRecorder(Thread):
             return
         if self.__status != iRecorder.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
-        try:
-            data: list = self.__save_data.get(timeout=timeout)
-        except queue.Empty:
-            return []
+        data: list = self.__save_data.get()
         while not self.__save_data.empty():
             data.extend(self.__save_data.get())
         return data
@@ -522,6 +521,7 @@ class iRecorder(Thread):
                     if self.__lsl_flag:
                         self._lsl_stream.push_chunk(ret)
             except Exception:
+                traceback.print_exc()
                 if (self.__dev_args["type"] == "W32") and (retry < 1):
                     try:
                         print("Wi-Fi reconnecting...")
@@ -560,6 +560,7 @@ class iRecorder(Thread):
                 timestamp = time.time()
                 # print("Ah, ah, ah, ah\nStayin' alive, stayin' alive")
             except Exception:
+                traceback.print_exc()
                 self.__error_message = "Device connection lost."
                 self.__status = iRecorder.Dev.TERMINATE_START
 

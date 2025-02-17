@@ -1,13 +1,13 @@
 import time
 import queue
+import traceback
 from queue import Queue
 from threading import Thread
 from typing import Optional
 from enum import Enum
+from copy import deepcopy
 from .data_parser import Parser
 from .device_socket import sock
-import traceback
-from copy import deepcopy
 
 
 class eConAlpha(Thread):
@@ -358,8 +358,8 @@ class eConAlpha(Thread):
                         )
                     if self.__lsl_imu_flag:
                         self._lsl_imu.push_chunk([frame[-1] for frame in ret])
-            except Exception as e:
-                print(e)
+            except Exception:
+                traceback.print_exc()
                 self.__socket_flag = "Data transmission timeout."
                 self.__status = eConAlpha.Dev.TERMINATE_START
 
@@ -377,6 +377,7 @@ class eConAlpha(Thread):
             try:  # stop data acquisition when thread ended
                 self.dev.stop_recv()
             except Exception:
+                traceback.print_exc()
                 if self.__status == eConAlpha.Dev.IDLE_START:
                     self.__socket_flag = "Connection lost."
                 self.__status = eConAlpha.Dev.TERMINATE_START

@@ -11,10 +11,10 @@ class NPQueue:
     def empty(self):
         return self.__cur == 0
 
-    def get(self):
+    def get(self) -> list:
         data = self.__array[:self.__cur, :]
         self.__cur = 0
-        return data
+        return list(data)
 
     def put(self, data):
         while self.__cur + len(data) >= self.__data_len:

@@ -1,3 +1,6 @@
+import ctypes
+from pathlib import Path
+from platform import system
 import re
 from datetime import datetime
 import numpy as np
@@ -13,6 +16,19 @@ class Parser:
     _threshold_ratio = 0.005
 
     def __init__(self, chs):
+        class Witharray(ctypes.Structure):
+            _fields_ = [("data", ctypes.c_double * chs)]
+
+        suff = (
+            "dll"
+            if system() == "Windows"
+            else ("dylib" if system() == "Darwin" else "so")
+        )
+        base = str(Path(__file__).parent.joinpath("transform." + suff))
+        self.__parser = ctypes.CDLL(base)
+        self.__parser.function.argtypes = [ctypes.c_char_p]
+        self.__parser.function.restype = Witharray
+
         self.chs = chs
         self.batt_val = 0
         self.imp_flag = False
@@ -64,8 +80,8 @@ class Parser:
             return
         frames = []
         for frame_obj in self.__pattern.finditer(self.__buffer):
-            frame = memoryview(frame_obj.group())
-            raw = frame[self._start : self._checksum]
+            frame = frame_obj.group()
+            raw = frame[self._start: self._checksum]
             if frame[self._checksum] != (~sum(raw)) & 0xFF:
                 self._drop_count += 1
                 err = f"|Checksum invalid, packet dropped{datetime.now()}\n|Current:{frame.hex()}"
@@ -77,15 +93,16 @@ class Parser:
                 err = f">>>> Pkt Los Cur:{cur_num} Last valid:{self.__last_num} buf len:{len(self.__buffer)} dropped times:{self._drop_count} {datetime.now()}<<<<\n"
                 print(err)
             self.__last_num = cur_num
-            data = [
-                int.from_bytes(
-                    raw[i * self._byts : (i + 1) * self._byts],
-                    signed=True,
-                    byteorder="big",
-                )
-                * self._ratio
-                for i in self.ch_idx
-            ]
+            # Normal way to transform data
+            # data = [
+            #     int.from_bytes(
+            #         raw[i * self._byts: (i + 1) * self._byts],
+            #         signed=True,
+            #         byteorder="big",
+            #     ) * self._ratio for i in self.ch_idx
+            # ]
+            data = self.__parser.function(raw).data[:self.chs]
+            data = [data[i] for i in self.ch_idx]
             data.append(frame[self._trigger])
             frames.append(data)
         if frames:
