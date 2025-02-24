@@ -1,3 +1,3 @@
-from .iRecorder import iRecorder
+__all__ = ["iSense"]
 
-__all__ = ["iRecorder"]
+from .device import iSense

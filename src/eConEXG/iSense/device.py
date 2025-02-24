@@ -8,7 +8,7 @@ from threading import Thread
 from typing import Optional
 
 
-class iRecorder(Thread):
+class iSense(Thread):
     class Dev(Enum):
         SIGNAL = 10  # self.Dev.SIGNAL transmision mode
         SIGNAL_START = 11
@@ -21,9 +21,9 @@ class iRecorder(Thread):
 
     def __init__(self, fs: int):
         from .data_parser import Parser
-        from .dev_socket import iRecorderUSB
+        from .dev_socket import iSenseUSB
 
-        print("initing iRecorder")
+        print("initing iSense")
         super().__init__(daemon=True)
         self.fs = fs
         self.__socket_flag = Queue()
@@ -32,7 +32,7 @@ class iRecorder(Thread):
         self.__status = self.Dev.TERMINATE
         try:
             self.__parser = Parser(fs=self.fs)
-            self.__dev = iRecorderUSB(self.fs, self.__parser.pkt_size)
+            self.__dev = iSenseUSB(self.fs, self.__parser.pkt_size)
             self.__dev.connect_socket()
             self.__dev.stop_recv()
             self.__socket_flag.put("Connected")
@@ -173,7 +173,7 @@ class iRecorder(Thread):
         except Exception:
             pass
         self.__status = self.Dev.TERMINATE
-        print("iRecorder disconnected")
+        print("iSense disconnected")
 
     def __recv_data(self, imp_mode=True):
         self.__parser.imp_flag = imp_mode
@@ -213,7 +213,7 @@ class iRecorder(Thread):
         self.__save_data.put(None)
         while self.__save_data.get() is not None:
             continue
-        print(f"iRecorder data thread closed. {datetime.now()}")
+        print(f"iSense data thread closed. {datetime.now()}")
 
     def __idle_state(self):
         timestamp = time.time()
@@ -230,24 +230,3 @@ class iRecorder(Thread):
                 traceback.print_exc()
                 self.__socket_flag.put("Connection Lost!")
                 self.__status = self.Dev.TERMINATE_START
-
-
-if __name__ == "__main__":
-    dev = iRecorder(8000)
-    start = time.time()
-    duartion = 3
-    dev.start_acquisition_data()
-    print("start acquisition")
-    while time.time() - start < duartion:
-        data = dev.get_data()
-        # if data.size:
-        #     # print(data.shape)
-    dev.stop_acquisition()
-    dev.start_acquisition_impedance()
-    print("start impedance")
-    start = time.time()
-    while time.time() - start < duartion:
-        imp = dev.get_impedance()
-        print(imp)
-    dev.close_dev()
-    print("finished")

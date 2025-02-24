@@ -8,6 +8,7 @@ nav:
   - Home: index.md
   - Devices: 
     - iRecorder: iRecorder.md
+    - iSense: iSense.md
     - iFocus: iFocus.md
     - Trigger Box: 
       - Wireless: triggerBoxWireless.md

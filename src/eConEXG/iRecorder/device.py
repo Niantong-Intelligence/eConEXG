@@ -250,7 +250,9 @@ class iRecorder(Thread):
             time.sleep(0.01)
         self.__check_dev_status()
 
-    def set_update_functions(self, function: Callable[[numpy.array], None] = None) -> None:
+    def set_update_functions(
+        self, function: Callable[[numpy.array], None] = None
+    ) -> None:
         """
         set the out of class function, invoked automatically tp process data when self.__with_q is False.
 

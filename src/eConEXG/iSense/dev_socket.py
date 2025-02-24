@@ -8,7 +8,7 @@ import usb.core
 import usb.util
 
 
-class iRecorderUSB:
+class iSenseUSB:
     out_point = 0x02
     in_point = 0x86
     pref = b"\x55\xa5"
@@ -121,6 +121,6 @@ class iRecorderUSB:
 
 
 if __name__ == "__main__":
-    dev = iRecorderUSB(fs=8000)
+    dev = iSenseUSB(fs=8000)
     dev.connect_socket()
     dev.get_endpoint()
