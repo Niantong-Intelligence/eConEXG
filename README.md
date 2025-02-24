@@ -23,6 +23,7 @@ Optional dependencies can be installed via `pip install econexg[option1,option2,
     Available options:
         bdf: save to BDF file functionality support.
         lsl: LSL stream functionality support.
+        usb: iSense USB model support.
         wifi: iRecorder W32 wifi model support, msvc build tools required.
 
 ## Quick Start
