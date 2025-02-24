@@ -30,13 +30,14 @@ Optional dependencies can be installed via `pip install econexg[option1,option2,
 Example code can be found in [examples](https://github.com/Niantong-Intelligence/eConEXG/tree/main/examples).
 
 ## Platform Support
-| Hardware| Windows| macOS | Linux  |
-|:----|:---------:|:--------:|:------:|
-| iRecorder USB |✓|✓|✓|
-| iRecorder W8\|16|✓|𐄂|𐄂|
-| iRecorder W32 |✓|✓|✓|
-| iFocus        |✓|✓|✓|
-| TriggerBox    |✓|✓|✓|
+| Hardware         | Windows| macOS | Linux  |
+|:-----------------|:---------:|:--------:|:------:|
+| iSense USB       |✓|✓|✓|
+| iRecorder USB    |✓|✓|✓|
+| iRecorder W8\|16 |✓|𐄂|𐄂|
+| iRecorder W32    |✓|✓|✓|
+| iFocus           |✓|✓|✓|
+| TriggerBox       |✓|✓|✓|
 
 
 ## More

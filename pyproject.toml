@@ -32,6 +32,7 @@ Changelog = "https://niantong-intelligence.github.io/eConEXG/changelog/"
 [project.optional-dependencies]
 bdf = ["pyEDFlib>=0.1.38"]
 lsl = ["pylsl>=1.16.2"]
+usb = ["pyusb>=1.2.1"]
 wifi = [
   "netifaces;platform_system=='Windows'",
   "netifaces;platform_system=='Darwin'",

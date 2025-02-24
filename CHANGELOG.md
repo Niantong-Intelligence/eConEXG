@@ -3,6 +3,10 @@
 This file contains tracks the changes landing in eConEXG. 
 <!-- released start -->
 
+### 0.1.30
+
+* **Add** iSense USB SDK to the repository
+
 ### 0.1.20
 
 * **Fix** bug where multiple devices of different type cannot be connected simultaneously
