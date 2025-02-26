@@ -2,7 +2,7 @@ from eConEXG import iFocus
 import time
 
 # change sample frequency to 500Hz for new firmware version in class args.
-# iFocus._dev_args.update({"fs_eeg": 500,"fs_imu": 100})
+# iFocus.dev_args.update({"fs_eeg": 500,"fs_imu": 100})
 
 
 # if port not given, it will connect to the first available device
