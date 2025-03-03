@@ -17,7 +17,7 @@ print(dev.get_dev_info())
 # dev=iFocus(ret[0])
 
 dev.start_acquisition_data()
-
+dev.create_bdf_file("test.bdf")
 """Open lsl streams for EEG and IMU data"""
 dev.open_lsl_emg()
 dev.open_lsl_imu()
