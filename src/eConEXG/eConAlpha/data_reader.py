@@ -42,6 +42,7 @@ class eConAlpha(Thread):
             5: "GRY_Z",
         },
         "AdapterInfo": "Serial Port",
+        "samples_per_packet": 8,  # Number of samples per electrode to be sent in one packet
     }
 
     def __init__(self, port: Optional[str] = None) -> None:
@@ -76,7 +77,6 @@ class eConAlpha(Thread):
         self.__enable_imu = False
         self.dev_args["name"] = port
         self.start()
-        self.samples_per_packet = 8
 
     def set_frequency(self, fs_emg: Optional[int] = None):
         """
@@ -211,7 +211,7 @@ class eConAlpha(Thread):
         expanded_channels = {}
         current_key = 0
         for label in self.dev_args["channel_eeg"].values():
-            for _ in range(self.samples_per_packet):
+            for _ in range(self.dev_args["samples_per_packet"]):
                 expanded_channels[current_key] = label
                 current_key += 1
 
@@ -285,7 +285,7 @@ class eConAlpha(Thread):
         elctds = {}
         # Expand EEG channels: repeat each EEG electrode label 'samples_per_packet' times.
         for v in self.dev_args["channel_eeg"].values():
-            for _ in range(self.samples_per_packet):
+            for _ in range(self.dev_args["samples_per_packet"]):
                 elctds[key] = v
                 key += 1
         # Add IMU channels as they are (no expansion)
