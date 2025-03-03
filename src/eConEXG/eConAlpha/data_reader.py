@@ -80,7 +80,7 @@ class eConAlpha(Thread):
 
     def set_frequency(self, fs_emg: Optional[int] = None):
         """
-        Change the sampling frequency of iFocus.
+        Change the sampling frequency of eConAlpha.
 
         Args:
             fs_emg: sampling frequency of eeg data, should be 250, 500, 1000 or 2000.
@@ -95,7 +95,7 @@ class eConAlpha(Thread):
         if fs_emg is None:
             fs_emg = self.dev_args["fs_emg"]
         if fs_emg not in [250, 500, 1000, 2000]:
-            raise ValueError("fs_emg should be 250 or 500")
+            raise ValueError("fs_emg should be 250, 500, 1000, or 2000")
         self.dev_args["fs_emg"] = fs_emg
         fs_imu = fs_emg / 8
         self.dev_args["fs_imu"] = fs_imu
@@ -120,13 +120,13 @@ class eConAlpha(Thread):
     @staticmethod
     def find_devs() -> list:
         """
-        Find available iFocus devices.
+        Find available eConAlpha devices.
 
         Returns:
             available device ports.
 
         Raises:
-            Exception: if no iFocus device found.
+            Exception: if no eConAlpha device found.
         """
         return sock.find_devs()
 
