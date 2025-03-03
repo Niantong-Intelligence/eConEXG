@@ -193,16 +193,16 @@ class eConAlpha(Thread):
 
     def open_lsl_emg(self):
         """
-        Open LSL EEG stream, can be invoked after `start_acquisition_data()`.
+        Open LSL EMG stream, can be invoked after `start_acquisition_data()`.
 
         Raises:
             Exception: if data acquisition not started or LSL stream already opened.
             LSLException: if LSL stream creation failed.
-            ImportError: if `pylsl` is not installed or liblsl not installed for unix like system.
+            importError: if `pylsl` is not installed or liblsl not installed for unix like system.
         """
-        if self.__status != iFocus.Dev.SIGNAL:
+        if self.__status != eConAlpha.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
-        if self._lsl_emg is not None:
+        if hasattr(self, "_lsl_eeg"):
             raise Exception("LSL stream already opened.")
         from ..utils.lslWrapper import lslSender
 
@@ -210,17 +210,17 @@ class eConAlpha(Thread):
         # replicating each electrode label 'samples_per_packet' times.
         expanded_channels = {}
         current_key = 0
-        for label in self.dev_args["channel_eeg"].values():
+        for label in self.dev_args["channel_emg"].values():
             for _ in range(self.dev_args["samples_per_packet"]):
                 expanded_channels[current_key] = label
                 current_key += 1
 
-        # Use the expanded channel dictionary for initializing the LSL stream.
+        # Use the expanded channel dictionary for initializing the LSL stream
         self._lsl_emg = lslSender(
-            expanded_channels,  # Expanded channels reflecting samples_per_packet.
-            f"{self.dev_args['type']}EEG{self.dev_args['name'][-2:]}",
-            "EEG",
-            self.dev_args["fs_eeg"],
+            expanded_channels,  # Expanded channels reflecting samples_per_packet
+            f"{self.dev_args['type']}EMG{self.dev_args['name'][-2:]}",
+            "EMG",
+            self.dev_args["fs_emg"],
             with_trigger=False,
         )
         self.__lsl_emg_flag = True
@@ -273,18 +273,18 @@ class eConAlpha(Thread):
         Raises:
             Exception: if data acquisition not started or LSL stream already opened.
             LSLException: if LSL stream creation failed.
-            ImportError: if `pylsl` is not installed or liblsl not installed for unix like system.
+            importError: if `pylsl` is not installed or liblsl not installed for unix like system.
         """
-        if self.__status != iFocus.Dev.SIGNAL:
+        if self.__status != eConAlpha.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
-        if self._lsl_emg_imu is not None:
+        if hasattr(self, "_lsl_emg_imu"):
             raise Exception("LSL stream already opened.")
         from ..utils.lslWrapper import lslSender
 
         key = 0
         elctds = {}
-        # Expand EEG channels: repeat each EEG electrode label 'samples_per_packet' times.
-        for v in self.dev_args["channel_eeg"].values():
+        # Expand EMG channels: repeat each EMG electrode label 'samples_per_packet' times.
+        for v in self.dev_args["channel_emg"].values():
             for _ in range(self.dev_args["samples_per_packet"]):
                 elctds[key] = v
                 key += 1
@@ -292,16 +292,16 @@ class eConAlpha(Thread):
         for v in self.dev_args["channel_imu"].values():
             elctds[key] = v
             key += 1
-
+            
         self._lsl_emg_imu = lslSender(
             elctds,
             f"{self.dev_args['type']}EEG-IMU{self.dev_args['name'][-2:]}",
             "EEG-IMU",
-            self.dev_args["fs_eeg"] + self.dev_args["fs_imu"],
+            self.dev_args["fs_emg"] + self.dev_args["fs_imu"],
             unit="degree",
             with_trigger=False,
         )
-        # Note: This combined LSL stream now reflects the expanded EEG channels
+        # Note: This combined LSL stream now reflects the expanded EMG channels
         # and original IMU channels, ensuring the packet structure is maintained.
         self.__lsl_emg_flag = True
         self.__lsl_imu_flag = True
