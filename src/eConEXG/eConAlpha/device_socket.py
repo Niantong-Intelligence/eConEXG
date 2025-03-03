@@ -48,7 +48,7 @@ class sock:
                 dev.close()
                 ret.append(device.device)
         if len(ret) == 0:
-            raise Exception("iFocus device not found")
+            raise Exception("eConAlpha device not found")
         return ret
 
     def connect_socket(self):
