@@ -26,7 +26,7 @@ class iFocus(Thread):
         "channel_eeg": {0: "CH0"},
         "channel_imu": {0: "X", 1: "Y", 2: "Z"},
         "AdapterInfo": "Serial Port",
-   
+        "samples_per_packet": 5,  # Number of samples per electrode to be sent in one packet
     }
 
     def __init__(self, port: Optional[str] = None) -> None:
@@ -63,7 +63,6 @@ class iFocus(Thread):
         self._bdf_file = None
         self.__enable_imu = False
         self.dev_args["name"] = port
-        self.samples_per_packet = 5            # Number of samples per electrode to be sent in one packet
         self.start()
 
     def set_frequency(self, fs_eeg: int = None):
@@ -198,7 +197,7 @@ class iFocus(Thread):
         expanded_channels = {}
         current_key = 0
         for label in self.dev_args["channel_eeg"].values():
-            for _ in range(self.samples_per_packet):
+            for _ in range(self.dev_args["samples_per_packet"]):
                 expanded_channels[current_key] = label
                 current_key += 1
 
@@ -274,7 +273,7 @@ class iFocus(Thread):
         elctds = {}
         # Expand EEG channels: repeat each EEG electrode label 'samples_per_packet' times.
         for v in self.dev_args["channel_eeg"].values():
-            for _ in range(self.samples_per_packet):
+            for _ in range(self.dev_args["samples_per_packet"]):
                 elctds[key] = v
                 key += 1
         # Add IMU channels as they are (no expansion)
