@@ -3,6 +3,10 @@
 This file contains tracks the changes landing in eConEXG. 
 <!-- released start -->
 
+### 0.1.35
+
+* **Fix** the bug of missing data when EMG and IMU data are transmitted simultaneously in iFocus and eConAlpha SDK.
+
 ### 0.1.30
 
 * **Add** iSense USB SDK to the repository

@@ -1,5 +1,7 @@
 import re
 from datetime import datetime
+from typing import Optional
+
 import numpy as np
 
 
@@ -58,14 +60,14 @@ class Parser:
         impe_data = np.where(iserror <= 0.2, np.inf, impe_data).tolist()
         self.impedance = impe_data
 
-    def parse_data(self, q: bytes) -> list[list[float]]:
+    def parse_data(self, q: bytes) -> Optional[list[list[float]]]:
         self.__buffer.extend(q)
         if len(self.__buffer) < self._threshold:
             return
         frames = []
         for frame_obj in self.__pattern.finditer(self.__buffer):
             frame = memoryview(frame_obj.group())
-            raw = frame[self._start : self._checksum]
+            raw = frame[self._start: self._checksum]
             if frame[self._checksum] != (~sum(raw)) & 0xFF:
                 self._drop_count += 1
                 err = f"|Checksum invalid, packet dropped{datetime.now()}\n|Current:{frame.hex()}"
@@ -79,7 +81,7 @@ class Parser:
             self.__last_num = cur_num
             data = [
                 int.from_bytes(
-                    raw[i * self._byts : (i + 1) * self._byts],
+                    raw[i * self._byts: (i + 1) * self._byts],
                     signed=True,
                     byteorder="big",
                 )
