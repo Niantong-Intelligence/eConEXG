@@ -42,6 +42,7 @@ class eConAlpha(Thread):
             5: "GRY_Z",
         },
         "AdapterInfo": "Serial Port",
+        "samples_per_packet": 8,  # Number of samples per electrode to be sent in one packet
     }
 
     def __init__(self, port: Optional[str] = None) -> None:
@@ -79,7 +80,7 @@ class eConAlpha(Thread):
 
     def set_frequency(self, fs_emg: Optional[int] = None):
         """
-        Change the sampling frequency of iFocus.
+        Change the sampling frequency of eConAlpha.
 
         Args:
             fs_emg: sampling frequency of eeg data, should be 250, 500, 1000 or 2000.
@@ -94,7 +95,7 @@ class eConAlpha(Thread):
         if fs_emg is None:
             fs_emg = self.dev_args["fs_emg"]
         if fs_emg not in [250, 500, 1000, 2000]:
-            raise ValueError("fs_emg should be 250 or 500")
+            raise ValueError("fs_emg should be 250, 500, 1000, or 2000")
         self.dev_args["fs_emg"] = fs_emg
         fs_imu = fs_emg / 8
         self.dev_args["fs_imu"] = fs_imu
@@ -119,13 +120,13 @@ class eConAlpha(Thread):
     @staticmethod
     def find_devs() -> list:
         """
-        Find available iFocus devices.
+        Find available eConAlpha devices.
 
         Returns:
             available device ports.
 
         Raises:
-            Exception: if no iFocus device found.
+            Exception: if no eConAlpha device found.
         """
         return sock.find_devs()
 
@@ -205,8 +206,18 @@ class eConAlpha(Thread):
             raise Exception("LSL stream already opened.")
         from ..utils.lslWrapper import lslSender
 
+        # Create an expanded channel dictionary for LSL stream creation,
+        # replicating each electrode label 'samples_per_packet' times.
+        expanded_channels = {}
+        current_key = 0
+        for label in self.dev_args["channel_emg"].values():
+            for _ in range(self.dev_args["samples_per_packet"]):
+                expanded_channels[current_key] = label
+                current_key += 1
+
+        # Use the expanded channel dictionary for initializing the LSL stream
         self._lsl_emg = lslSender(
-            self.dev_args["channel_emg"],
+            expanded_channels,  # Expanded channels reflecting samples_per_packet
             f"{self.dev_args['type']}EMG{self.dev_args['name'][-2:]}",
             "EMG",
             self.dev_args["fs_emg"],
@@ -272,12 +283,16 @@ class eConAlpha(Thread):
 
         key = 0
         elctds = {}
-        for k, v in self.dev_args["channel_emg"].items():
+        # Expand EMG channels: repeat each EMG electrode label 'samples_per_packet' times.
+        for v in self.dev_args["channel_emg"].values():
+            for _ in range(self.dev_args["samples_per_packet"]):
+                elctds[key] = v
+                key += 1
+        # Add IMU channels as they are (no expansion)
+        for v in self.dev_args["channel_imu"].values():
             elctds[key] = v
             key += 1
-        for k, v in self.dev_args["channel_imu"].items():
-            elctds[key] = v
-            key += 1
+            
         self._lsl_emg_imu = lslSender(
             elctds,
             f"{self.dev_args['type']}EEG-IMU{self.dev_args['name'][-2:]}",
@@ -286,6 +301,8 @@ class eConAlpha(Thread):
             unit="degree",
             with_trigger=False,
         )
+        # Note: This combined LSL stream now reflects the expanded EMG channels
+        # and original IMU channels, ensuring the packet structure is maintained.
         self.__lsl_emg_flag = True
         self.__lsl_imu_flag = True
 
