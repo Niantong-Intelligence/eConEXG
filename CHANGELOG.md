@@ -6,6 +6,7 @@ This file contains tracks the changes landing in eConEXG.
 ### 0.1.35
 
 * **Fix** the bug of missing data when EMG and IMU data are transmitted simultaneously in iFocus and eConAlpha SDK.
+* **Update** eConAlpha and iFouc SDKs now allow three LSL streams simultaneously running, which are used to transmit EMG data separately, IMU data separately, and both EMG and IMU data simultaneously
 
 ### 0.1.30
 

@@ -73,6 +73,7 @@ class eConAlpha(Thread):
         self.__socket_flag = None
         self.__lsl_imu_flag = False
         self.__lsl_emg_flag = False
+        self.__lsl_emg_imu_flag = False
         self._bdf_file = None
         self.__enable_imu = False
         self.dev_args["name"] = port
@@ -83,7 +84,7 @@ class eConAlpha(Thread):
         Change the sampling frequency of eConAlpha.
 
         Args:
-            fs_emg: sampling frequency of eeg data, should be 250, 500, 1000 or 2000.
+            fs_emg: sampling frequency of emg data, should be 250, 500, 1000 or 2000.
                 fs_imu will be automatically set to 1/8 of fs_emg.
 
         Raises:
@@ -109,10 +110,10 @@ class eConAlpha(Thread):
         Returns:
             A dictionary containing device information, which includes:
                 `type`: hardware type;
-                `channel_emg`: channel dictionary, including EEG channel index and name;
+                `channel_emg`: channel dictionary, including EMG channel index and name;
                 `channel_imu`: channel dictionary, including IMU channel index and name;
                 `AdapterInfo`: adapter used for connection;
-                `fs_emg`: sample frequency of EEG in Hz;
+                `fs_emg`: sample frequency of EMG in Hz;
                 `fs_imu`: sample frequency of IMU in Hz;
         """
         return deepcopy(self.dev_args)
@@ -140,7 +141,7 @@ class eConAlpha(Thread):
             timeout: Non-negative value, blocks at most 'timeout' seconds and return, if set to `None`, blocks until new data available.
 
         Returns:
-            A list of frames, each frame is made up of 5 eeg data and 1 imu data in a shape as below:
+            A list of frames, each frame is made up of 5 emg data and 1 imu data in a shape as below:
                 [[`emg_ch0_0,...,emg_ch8_0`],..., [`emg_ch0_7,...,emg_ch8_7`], [`acc_x`, `acc_y`, `acc_z`,`gry_x`,`gry_y`,`gry_z`]],
                     in which number `0~4` after `_` indicates the time order of channel data.
 
@@ -148,7 +149,7 @@ class eConAlpha(Thread):
             Exception: if device not connected, connection failed, data transmission timeout/init failed, or unknown error.
 
         Data Unit:
-            - eeg: µV
+            - emg: µV
             - acc: mg
             - gry: bps
         """
@@ -268,7 +269,7 @@ class eConAlpha(Thread):
 
     def open_lsl_emg_imu(self):
         """
-        Open LSL EMG and IMU stream, can be invoked after `start_acquisition_data()`.
+        Open LSL stream to transmit EMG and IMU simultaneously, can be invoked after `start_acquisition_data()`.
 
         Raises:
             Exception: if data acquisition not started or LSL stream already opened.
@@ -295,23 +296,21 @@ class eConAlpha(Thread):
 
         self._lsl_emg_imu = lslSender(
             elctds,
-            f"{self.dev_args['type']}EEG-IMU{self.dev_args['name'][-2:]}",
-            "EEG-IMU",
+            f"{self.dev_args['type']}EMG-IMU{self.dev_args['name'][-2:]}",
+            "EMG-IMU",
             self.dev_args["fs_emg"] + self.dev_args["fs_imu"],
             unit="degree",
             with_trigger=False,
         )
         # Note: This combined LSL stream now reflects the expanded EMG channels
         # and original IMU channels, ensuring the packet structure is maintained.
-        self.__lsl_emg_flag = True
-        self.__lsl_imu_flag = True
+        self.__lsl_emg_imu_flag = True
 
     def close_lsl_emg_imu(self):
         """
         Close LSL EMG and IMU stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
         """
-        self.__lsl_emg_flag = False
-        self.__lsl_imu_flag = False
+        self.__lsl_emg_imu_flag = False
         if hasattr(self, "_lsl_emg_imu"):
             del self._lsl_emg_imu
 
@@ -412,13 +411,13 @@ class eConAlpha(Thread):
                         self.__save_data.put(ret)
                     if self.__bdf_flag:
                         self._bdf_file.write_chunk(ret)
-                    if self.__lsl_emg_flag and not self.__lsl_imu_flag:
+                    if self.__lsl_emg_flag:
                         self._lsl_emg.push_chunk(
                             [frame for frames in ret for frame in frames[:-1]]
                         )
-                    elif self.__lsl_imu_flag and not self.__lsl_emg_flag:
+                    if self.__lsl_imu_flag:
                         self._lsl_imu.push_chunk([frame[-1] for frame in ret])
-                    elif self.__lsl_emg_flag and self.__lsl_imu_flag:
+                    if self.__lsl_emg_imu_flag:
                         self._lsl_emg_imu.push_chunk(
                             [frame for frames in ret for frame in frames[:-1]]
                             + [frame[-1] for frame in ret]
