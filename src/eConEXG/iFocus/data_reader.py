@@ -13,7 +13,7 @@ from copy import deepcopy
 class iFocus(Thread):
     class Dev(Enum):
         SIGNAL = 10
-        SIGNAL_START = 11 
+        SIGNAL_START = 11
         IDLE = 30
         IDLE_START = 31
         TERMINATE = 40
@@ -211,8 +211,6 @@ class iFocus(Thread):
         )
         self.__lsl_emg_flag = True
 
-
-
     def close_lsl_emg(self):
         """
         Close LSL EEG stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
@@ -293,7 +291,6 @@ class iFocus(Thread):
         # and original IMU channels, ensuring the packet structure is maintained.
         self.__lsl_emg_flag = True
         self.__lsl_imu_flag = True
-
 
     def close_lsl_emg_imu(self):
         """

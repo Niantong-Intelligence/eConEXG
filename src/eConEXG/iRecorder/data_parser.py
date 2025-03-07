@@ -67,7 +67,7 @@ class Parser:
         frames = []
         for frame_obj in self.__pattern.finditer(self.__buffer):
             frame = memoryview(frame_obj.group())
-            raw = frame[self._start: self._checksum]
+            raw = frame[self._start : self._checksum]
             if frame[self._checksum] != (~sum(raw)) & 0xFF:
                 self._drop_count += 1
                 err = f"|Checksum invalid, packet dropped{datetime.now()}\n|Current:{frame.hex()}"
@@ -81,7 +81,7 @@ class Parser:
             self.__last_num = cur_num
             data = [
                 int.from_bytes(
-                    raw[i * self._byts: (i + 1) * self._byts],
+                    raw[i * self._byts : (i + 1) * self._byts],
                     signed=True,
                     byteorder="big",
                 )

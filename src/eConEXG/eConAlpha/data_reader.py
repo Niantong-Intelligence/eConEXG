@@ -202,7 +202,7 @@ class eConAlpha(Thread):
         """
         if self.__status != eConAlpha.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
-        if hasattr(self, "_lsl_eeg"):
+        if hasattr(self, "_lsl_emg"):
             raise Exception("LSL stream already opened.")
         from ..utils.lslWrapper import lslSender
 
@@ -225,12 +225,12 @@ class eConAlpha(Thread):
         )
         self.__lsl_emg_flag = True
 
-    def close_lsl_eeg(self):
+    def close_lsl_emg(self):
         """
         Close LSL EMG stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
         """
         self.__lsl_emg_flag = False
-        if hasattr(self, "_lsl_eeg"):
+        if hasattr(self, "_lsl_emg"):
             del self._lsl_emg
 
     def open_lsl_imu(self):
@@ -292,7 +292,7 @@ class eConAlpha(Thread):
         for v in self.dev_args["channel_imu"].values():
             elctds[key] = v
             key += 1
-            
+
         self._lsl_emg_imu = lslSender(
             elctds,
             f"{self.dev_args['type']}EEG-IMU{self.dev_args['name'][-2:]}",
@@ -429,7 +429,7 @@ class eConAlpha(Thread):
                 self.__status = eConAlpha.Dev.TERMINATE_START
 
         # clear buffer
-        self.close_lsl_eeg()
+        self.close_lsl_emg()
         self.close_lsl_imu()
         self.close_lsl_emg_imu()
         self.close_bdf_file()
