@@ -16,11 +16,16 @@ print(dev.get_dev_info())
 # ret=iFocus.find_devs()
 # dev=iFocus(ret[0])
 
+""""Vibrate the arm band, wait for a while after connection before using vibrate functionality"""
+time.sleep(1)
+dev.shock_band()
+
 dev.start_acquisition_data()
 dev.create_bdf_file("test.bdf")
 """Open lsl streams for EEG and IMU data"""
-# dev.open_lsl_eeg()
-# dev.open_lsl_imu()
+dev.open_lsl_emg()
+dev.open_lsl_imu()
+dev.open_lsl_emg_imu()
 
 count = 0
 first_packet = None
@@ -38,6 +43,12 @@ except KeyboardInterrupt:
 
 if first_packet is not None:
     print(f"average fs:{count/(time.time()-first_packet)}")
+
+"""Close lsl streams for EEG and IMU data"""
+dev.close_lsl_emg()
+dev.close_lsl_imu()
+dev.close_lsl_emg_imu()
+
 
 try:
     dev.close_dev()

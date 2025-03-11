@@ -21,6 +21,7 @@ dev.create_bdf_file("test.bdf")
 """Open lsl streams for EEG and IMU data"""
 dev.open_lsl_emg()
 dev.open_lsl_imu()
+dev.open_lsl_emg_imu()
 
 count = 0
 first_packet = None
@@ -37,6 +38,11 @@ except KeyboardInterrupt:
 
 if first_packet is not None:
     print(f"average fs:{count/(time.time()-first_packet)}")
+
+"""Close lsl streams for EEG and IMU data"""
+dev.close_lsl_emg()
+dev.close_lsl_imu()
+dev.close_lsl_emg_imu()
 
 try:
     dev.close_dev()
