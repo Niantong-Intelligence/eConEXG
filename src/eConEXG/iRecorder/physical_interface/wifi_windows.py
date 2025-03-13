@@ -75,7 +75,11 @@ class wifiWindows(Thread):
             output = subprocess.check_output(
                 ["netsh", "wlan", "show", "interfaces"], creationflags=0x08000000
             )
-            output = output.decode(locale.getpreferredencoding())
+            try:
+                output = output.decode(locale.getpreferredencoding())
+            except Exception as e:
+                print(e)
+                output = output.decode('utf-8')
             for profile in output.split("\r\n\r\n"):
                 if iface.lower() in profile.lower():
                     lines = profile.split("\n")
