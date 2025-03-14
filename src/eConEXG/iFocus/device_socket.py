@@ -32,14 +32,14 @@ class sock:
         ret = []
         devices = comports()
         for device in devices:
-            if "FTDI" in device.manufacturer:
-                if "ifocus" in device.serial_number.lower():
-                    try:
-                        dev = Serial(port=device.device, baudrate=921600, timeout=1)
-                    except serialutil.SerialException:
-                        continue
-                    dev.close()
-                    ret.append(device.device)
+            if (("FTDI" in device.manufacturer and "ifocus" in device.serial_number.lower())
+                    or (device.vid == 0x2FE3 and device.pid == 0x0001)):
+                try:
+                    dev = Serial(port=device.device, baudrate=921600, timeout=1)
+                except serialutil.SerialException:
+                    continue
+                dev.close()
+                ret.append(device.device)
         if len(ret) == 0:
             raise Exception("iFocus device not found")
         return ret
