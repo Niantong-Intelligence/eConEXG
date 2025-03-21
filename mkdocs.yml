@@ -10,6 +10,7 @@ nav:
     - iRecorder: iRecorder.md
     - iSense: iSense.md
     - iFocus: iFocus.md
+    - eConAlpha: eConAlpha.md
     - Trigger Box: 
       - Wireless: triggerBoxWireless.md
       - Wired: triggerBoxWire.md

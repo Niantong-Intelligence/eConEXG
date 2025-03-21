@@ -376,7 +376,7 @@ class eConAlpha(Thread):
 
     def shock_band(self):
         """
-        Send an instruction to shock the arm band
+        Send a command to vibrate the arm band
         """
         self.dev.shock_band()
 
