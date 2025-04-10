@@ -119,6 +119,7 @@ class bdfSaverEMG(bdfSaver):
                 :, :offset
             ]
             self._save_cnt += offset
+            self._data_position += offset
             if self._save_cnt >= self.fs:
                 self._data_q.put(np.vsplit(self._data_write, self.chs_len))
                 self._save_cnt = 0
@@ -137,7 +138,7 @@ class bdfSaverEMGIMU(bdfSaver):
         self.chs_imu_len = len(chs_imu)
         self.chs_eeg_names = [i for i in chs_eeg.values()]
         self.chs_imu_names = [i for i in chs_imu.values()]
-        super().__init__(filename, {}, 0, self.chs_eeg_len + self.chs_imu_len)
+        super().__init__(filename, {}, self.fs_eeg, self.chs_eeg_len + self.chs_imu_len)
         if not isinstance(self.fs_imu, int):
             self.setDatarecordDuration(2)
             self.fs_eeg *= 2
@@ -186,6 +187,7 @@ class bdfSaverEMGIMU(bdfSaver):
             )
             self.__save_cnt_eeg += eeg_signal.shape[1]
             self.__save_cnt_imu += 1
+            self._data_position += eeg_signal.shape[1]
             if self.__save_cnt_eeg >= self.fs_eeg or self.__save_cnt_imu >= self.fs_imu:
                 self._data_q.put(
                     np.vsplit(self.__data_write_eeg, self.chs_eeg_len)

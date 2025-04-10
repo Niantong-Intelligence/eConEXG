@@ -1,4 +1,4 @@
-from eConEXG import eConAlpha
+from eConEXG.eConAlpha import eConAlpha
 import time
 
 # change sample frequency to 500Hz for new firmware version in class args.
