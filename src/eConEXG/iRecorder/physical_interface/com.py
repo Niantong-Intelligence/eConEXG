@@ -44,7 +44,6 @@ class com(Thread):
                 self.device_queue.put([display_name, device.device, display_name])
 
     def run(self):
-        # platf = system()
         while self.__search_flag:
             self.__find_devices()
             time.sleep(0.5)

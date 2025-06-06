@@ -128,21 +128,17 @@ class bdfSaverEMG(bdfSaver):
 
 class bdfSaverEMGIMU(bdfSaver):
     def __init__(
-        self, filename, chs_eeg: dict, fs_eeg: int, chs_imu: dict, fs_imu, dev_type: str
+        self, filename, chs_eeg: dict, fs_eeg: int, chs_imu: dict, fs_imu: int, dev_type: str
     ) -> None:
         self.fs_eeg = int(fs_eeg)
         self.chs_eeg = [i for i in chs_eeg.keys()]
         self.chs_eeg_len = len(chs_eeg)
-        self.fs_imu = fs_imu
+        self.fs_imu = int(fs_imu)
         self.chs_imu = [i for i in chs_imu.keys()]
         self.chs_imu_len = len(chs_imu)
         self.chs_eeg_names = [i for i in chs_eeg.values()]
         self.chs_imu_names = [i for i in chs_imu.values()]
         super().__init__(filename, {}, self.fs_eeg, self.chs_eeg_len + self.chs_imu_len)
-        if not isinstance(self.fs_imu, int):
-            self.setDatarecordDuration(2)
-            self.fs_eeg *= 2
-            self.fs_imu = int(2 * self.fs_imu)
 
         info_eeg = info.copy()
         info_eeg.update({"sample_frequency": self.fs_eeg})
