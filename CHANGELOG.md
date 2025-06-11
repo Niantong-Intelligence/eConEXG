@@ -3,6 +3,10 @@
 This file contains tracks the changes landing in eConEXG. 
 <!-- released start -->
 
+### 0.2.0
+* **Update** Embedded the iSense SDK to the eConEXG. Improve iSense sample code
+* **Add** support for enabling LSL streaming within iSense SDK
+
 ### 0.1.35
 
 * **Fix** the bug of missing data when EMG and IMU data are transmitted simultaneously in iFocus and eConAlpha SDK.

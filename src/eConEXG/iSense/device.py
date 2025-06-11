@@ -1,6 +1,7 @@
 import queue
 import time
 import traceback
+import numpy as np
 from datetime import datetime
 from enum import Enum
 from queue import Queue
@@ -25,7 +26,7 @@ class iSense(Thread):
 
         print("initing iSense")
         super().__init__(daemon=True)
-        if fs not in {250, 500, 1000, 2000, 4000, 8000, 16000}:
+        if fs not in self.get_available_frequency():
             raise ValueError("Frequency is unsupported. Available frequencies: 250, 500, 1000, 2000, 4000, 8000, 16000")
         self.fs = fs
         self.__socket_flag = Queue()
@@ -44,6 +45,14 @@ class iSense(Thread):
             traceback.print_exc()
             self.__socket_flag.put(f"Error: {e}")
             return
+
+    @staticmethod
+    def get_available_frequency() -> list:
+        """Get available sample frequencies of iSense devices.
+        Returns:
+            Available sample frequencies in Hz.
+        """
+        return [250, 500, 1000, 2000, 4000, 8000]
 
     def start_acquisition_data(self) -> None:
         """
@@ -146,6 +155,42 @@ class iSense(Thread):
             self.__batt = self.__parser.batt_val
         return self.__batt
 
+    def open_lsl_stream(self, chs_info: dict[int, str]):
+        """
+        Open LSL stream, can be invoked after `start_acquisition_data()`,
+            each frame is the same as described in `get_data()`.
+
+        Args:
+            chs_info: Label the information of channels in LSL Stream
+
+        Raises:
+            Exception: if data acquisition not started or LSL stream already opened.
+            LSLException: if LSL stream creation failed.
+            importError: if `pylsl` not installed or liblsl not installed on unix like system.
+        """
+        if self.__status != iSense.Dev.SIGNAL:
+            raise Exception("Data acquisition not started, please start first.")
+        if hasattr(self, "_lsl_stream"):
+            raise Exception("LSL stream already opened.")
+        from ..utils.lslWrapper import lslSender
+
+        self.chs_index = [i for i in chs_info.keys()] + [136]
+        self._lsl_stream = lslSender(
+            chs_info,
+            "iSense",
+            "BioSignal",
+            self.fs,
+            with_trigger=True,
+        )
+
+    def close_lsl_stream(self):
+        """
+        Close LSL stream manually, invoked automatically after `stop_acquisition()` or `close_dev()`
+        """
+        if hasattr(self, "_lsl_stream"):
+            del self._lsl_stream
+            del self.chs_index
+
     def get_dev_flag(self) -> Optional[str]:
         """
         Query device status
@@ -158,15 +203,6 @@ class iSense(Thread):
             return self.__socket_flag.get_nowait()
         except queue.Empty:
             return
-
-    @staticmethod
-    def get_available_frequency() -> list:
-        """Get available sample frequencies of iSense.
-
-        Returns:
-            Available sample frequencies in Hz.
-        """
-        return [250, 500, 1000, 2000, 4000, 8000, 16000]
 
     def run(self):
         while self.__status not in [self.Dev.TERMINATE_START]:
@@ -207,6 +243,9 @@ class iSense(Thread):
                 ret = self.__parser.parse_data(data)
                 if ret:
                     self.__save_data.put(ret)
+                    if hasattr(self, "_lsl_stream"):
+                        ret = np.array(ret)
+                        self._lsl_stream.push_chunk(ret[:, self.chs_index].tolist())
         except Exception as e:
             traceback.print_exc()
             self.__socket_flag.put(f"Transmission error: {e}")

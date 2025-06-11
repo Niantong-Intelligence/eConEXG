@@ -22,9 +22,11 @@ if __name__ == "__main__":
 
     """
     创建iSense对象，设置采样率为8000。
+    使用get_available_frequency()查看所有可选采样率
     可选采样率有：[250, 500, 1000, 2000, 4000, 8000, 16000]，非法采样率会产生ValueError。
     对象创建后，程序即会自动连接设备，未连接成功会抛出异常。
     """
+    print(iSense.get_available_frequency())
     dev = iSense(8000)
 
     """
@@ -34,16 +36,22 @@ if __name__ == "__main__":
     print("start acquisition")
 
     """
+    使用 open_lsl_stream() 开启LSL流数据传输。
+    使用 close_lsl_stream() 关启LSL流数据传输。
+    """
+    dev.open_lsl_stream()
+    dev.close_lsl_stream()
+
+    """
     使用 data = get_data(timeout) 方法从队列中获取数据。timeout为最长等待时间。
     如将timeout设置为0.1时，若程序在0.1s内未获取任何数据，则自动中断。
     """
 
     start = time.time()
-    duartion = 3
-    while time.time() - start < duartion:
+    duration = 3
+    while time.time() - start < duration:
         data = dev.get_data()
-        # if data.size:
-        #     # print(data.shape)
+        print(data.shape)
 
     """
     使用 stop_acquisition() 方法将程序状态设置为停止收集状态，此时程序不再接收数据。
@@ -57,7 +65,7 @@ if __name__ == "__main__":
     dev.start_acquisition_impedance()
     print("start impedance")
     start = time.time()
-    while time.time() - start < duartion:
+    while time.time() - start < duration:
         imp = dev.get_impedance()
         print(imp)
 

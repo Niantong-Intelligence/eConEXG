@@ -513,7 +513,7 @@ class iRecorder(Thread):
                     if self.__with_q:
                         self.__save_data.put(ret)
                     elif isinstance(self.__update_func, Callable):
-                        ret_array = np.array(ret).T
+                        ret_array = np.array(ret)
                         if ret_array.size > 0:
                             self.__update_func(ret_array)
                     if self.__bdf_flag:
