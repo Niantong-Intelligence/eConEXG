@@ -415,6 +415,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#eConEXG.iSense.iSense.close_lsl_stream" class="md-nav__link">
+    <span class="md-ellipsis">
+      close_lsl_stream
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#eConEXG.iSense.iSense.get_available_frequency" class="md-nav__link">
     <span class="md-ellipsis">
       get_available_frequency
@@ -454,6 +463,15 @@
   <a href="#eConEXG.iSense.iSense.get_impedance" class="md-nav__link">
     <span class="md-ellipsis">
       get_impedance
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#eConEXG.iSense.iSense.open_lsl_stream" class="md-nav__link">
+    <span class="md-ellipsis">
+      open_lsl_stream
     </span>
   </a>
   
@@ -728,6 +746,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#eConEXG.iSense.iSense.close_lsl_stream" class="md-nav__link">
+    <span class="md-ellipsis">
+      close_lsl_stream
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#eConEXG.iSense.iSense.get_available_frequency" class="md-nav__link">
     <span class="md-ellipsis">
       get_available_frequency
@@ -767,6 +794,15 @@
   <a href="#eConEXG.iSense.iSense.get_impedance" class="md-nav__link">
     <span class="md-ellipsis">
       get_impedance
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#eConEXG.iSense.iSense.open_lsl_stream" class="md-nav__link">
+    <span class="md-ellipsis">
+      open_lsl_stream
     </span>
   </a>
   
@@ -870,8 +906,7 @@
 
               <details class="quote">
                 <summary>Source code in <code>src\eConEXG\iSense\device.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 11</span>
-<span class="normal"> 12</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 12</span>
 <span class="normal"> 13</span>
 <span class="normal"> 14</span>
 <span class="normal"> 15</span>
@@ -1102,7 +1137,48 @@
 <span class="normal">240</span>
 <span class="normal">241</span>
 <span class="normal">242</span>
-<span class="normal">243</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">iSense</span><span class="p">(</span><span class="n">Thread</span><span class="p">):</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">iSense</span><span class="p">(</span><span class="n">Thread</span><span class="p">):</span>
     <span class="k">class</span> <span class="nc">Dev</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
         <span class="n">SIGNAL</span> <span class="o">=</span> <span class="mi">10</span>  <span class="c1"># self.Dev.SIGNAL transmision mode</span>
         <span class="n">SIGNAL_START</span> <span class="o">=</span> <span class="mi">11</span>
@@ -1119,8 +1195,10 @@
 
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;initing iSense&quot;</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">fs</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="mi">250</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">2000</span><span class="p">,</span> <span class="mi">4000</span><span class="p">,</span> <span class="mi">8000</span><span class="p">,</span> <span class="mi">16000</span><span class="p">}:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Frequency is unsupported. Available frequencies: 250, 500, 1000, 2000, 4000, 8000, 16000&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fs</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_available_frequency</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Frequency is unsupported. Available frequencies: 250, 500, 1000, 2000, 4000, 8000, 16000&quot;</span>
+            <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fs</span> <span class="o">=</span> <span class="n">fs</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">__socket_flag</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">__save_data</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">()</span>
@@ -1138,6 +1216,14 @@
             <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">__socket_flag</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">return</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_available_frequency</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get available sample frequencies of iSense devices.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Available sample frequencies in Hz.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="mi">250</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">2000</span><span class="p">,</span> <span class="mi">4000</span><span class="p">,</span> <span class="mi">8000</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">start_acquisition_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1240,6 +1326,42 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">__batt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__parser</span><span class="o">.</span><span class="n">batt_val</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__batt</span>
 
+    <span class="k">def</span> <span class="nf">open_lsl_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chs_info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Open LSL stream, can be invoked after `start_acquisition_data()`,</span>
+<span class="sd">            each frame is the same as described in `get_data()`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            chs_info: Label the information of channels in LSL Stream</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            Exception: if data acquisition not started or LSL stream already opened.</span>
+<span class="sd">            LSLException: if LSL stream creation failed.</span>
+<span class="sd">            importError: if `pylsl` not installed or liblsl not installed on unix like system.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__status</span> <span class="o">!=</span> <span class="n">iSense</span><span class="o">.</span><span class="n">Dev</span><span class="o">.</span><span class="n">SIGNAL</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Data acquisition not started, please start first.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_lsl_stream&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;LSL stream already opened.&quot;</span><span class="p">)</span>
+        <span class="kn">from</span> <span class="nn">..utils.lslWrapper</span> <span class="kn">import</span> <span class="n">lslSender</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">chs_index</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">chs_info</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span> <span class="o">+</span> <span class="p">[</span><span class="mi">136</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lsl_stream</span> <span class="o">=</span> <span class="n">lslSender</span><span class="p">(</span>
+            <span class="n">chs_info</span><span class="p">,</span>
+            <span class="s2">&quot;iSense&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;BioSignal&quot;</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fs</span><span class="p">,</span>
+            <span class="n">with_trigger</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">close_lsl_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Close LSL stream manually, invoked automatically after `stop_acquisition()` or `close_dev()`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_lsl_stream&quot;</span><span class="p">):</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lsl_stream</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">chs_index</span>
+
     <span class="k">def</span> <span class="nf">get_dev_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Query device status</span>
@@ -1252,15 +1374,6 @@
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__socket_flag</span><span class="o">.</span><span class="n">get_nowait</span><span class="p">()</span>
         <span class="k">except</span> <span class="n">queue</span><span class="o">.</span><span class="n">Empty</span><span class="p">:</span>
             <span class="k">return</span>
-
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_available_frequency</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get available sample frequencies of iSense.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            Available sample frequencies in Hz.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">[</span><span class="mi">250</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">2000</span><span class="p">,</span> <span class="mi">4000</span><span class="p">,</span> <span class="mi">8000</span><span class="p">,</span> <span class="mi">16000</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">__status</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">Dev</span><span class="o">.</span><span class="n">TERMINATE_START</span><span class="p">]:</span>
@@ -1301,6 +1414,9 @@
                 <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__parser</span><span class="o">.</span><span class="n">parse_data</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">ret</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">__save_data</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_lsl_stream&quot;</span><span class="p">):</span>
+                        <span class="n">ret</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_lsl_stream</span><span class="o">.</span><span class="n">push_chunk</span><span class="p">(</span><span class="n">ret</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">chs_index</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">__socket_flag</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Transmission error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -1365,14 +1481,14 @@
 
             <details class="quote">
               <summary>Source code in <code>src\eConEXG\iSense\device.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">129</span>
-<span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span>
-<span class="normal">133</span>
-<span class="normal">134</span>
-<span class="normal">135</span>
-<span class="normal">136</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">close_dev</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">close_dev</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Close device connection and release resources.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1380,6 +1496,40 @@
         <span class="c1"># ensure socket is closed correctly</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">__status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Dev</span><span class="o">.</span><span class="n">TERMINATE_START</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="eConEXG.iSense.iSense.close_lsl_stream" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">close_lsl_stream</span><span class="p">()</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Close LSL stream manually, invoked automatically after <code>stop_acquisition()</code> or <code>close_dev()</code></p>
+
+            <details class="quote">
+              <summary>Source code in <code>src\eConEXG\iSense\device.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">close_lsl_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Close LSL stream manually, invoked automatically after `stop_acquisition()` or `close_dev()`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_lsl_stream&quot;</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lsl_stream</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">chs_index</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -1401,48 +1551,25 @@
 
     <div class="doc doc-contents ">
 
-        <p>Get available sample frequencies of iSense.</p>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code>list</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Available sample frequencies in Hz.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
+        <p>Get available sample frequencies of iSense devices.
+Returns:
+    Available sample frequencies in Hz.</p>
 
             <details class="quote">
               <summary>Source code in <code>src\eConEXG\iSense\device.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">162</span>
-<span class="normal">163</span>
-<span class="normal">164</span>
-<span class="normal">165</span>
-<span class="normal">166</span>
-<span class="normal">167</span>
-<span class="normal">168</span>
-<span class="normal">169</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="k">def</span> <span class="nf">get_available_frequency</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get available sample frequencies of iSense.</span>
-
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get available sample frequencies of iSense devices.</span>
 <span class="sd">    Returns:</span>
 <span class="sd">        Available sample frequencies in Hz.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="p">[</span><span class="mi">250</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">2000</span><span class="p">,</span> <span class="mi">4000</span><span class="p">,</span> <span class="mi">8000</span><span class="p">,</span> <span class="mi">16000</span><span class="p">]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="mi">250</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">2000</span><span class="p">,</span> <span class="mi">4000</span><span class="p">,</span> <span class="mi">8000</span><span class="p">]</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -1487,16 +1614,16 @@
 
             <details class="quote">
               <summary>Source code in <code>src\eConEXG\iSense\device.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">138</span>
-<span class="normal">139</span>
-<span class="normal">140</span>
-<span class="normal">141</span>
-<span class="normal">142</span>
-<span class="normal">143</span>
-<span class="normal">144</span>
-<span class="normal">145</span>
-<span class="normal">146</span>
-<span class="normal">147</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_battery_value</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_battery_value</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Query battery level.</span>
 
@@ -1613,18 +1740,7 @@ eeg channels can be updatd by <code>update_channels()</code>.</p>
 
             <details class="quote">
               <summary>Source code in <code>src\eConEXG\iSense\device.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
-<span class="normal">65</span>
-<span class="normal">66</span>
-<span class="normal">67</span>
-<span class="normal">68</span>
-<span class="normal">69</span>
-<span class="normal">70</span>
-<span class="normal">71</span>
-<span class="normal">72</span>
-<span class="normal">73</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">73</span>
 <span class="normal">74</span>
 <span class="normal">75</span>
 <span class="normal">76</span>
@@ -1639,7 +1755,18 @@ eeg channels can be updatd by <code>update_channels()</code>.</p>
 <span class="normal">85</span>
 <span class="normal">86</span>
 <span class="normal">87</span>
-<span class="normal">88</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]]:</span>
+<span class="normal">88</span>
+<span class="normal">89</span>
+<span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span>
+<span class="normal">93</span>
+<span class="normal">94</span>
+<span class="normal">95</span>
+<span class="normal">96</span>
+<span class="normal">97</span>
+<span class="normal">98</span>
+<span class="normal">99</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Acquire amplifier data, make sure this function is called in a loop so that it can continuously read the data.</span>
 
@@ -1720,18 +1847,18 @@ eeg channels can be updatd by <code>update_channels()</code>.</p>
 
             <details class="quote">
               <summary>Source code in <code>src\eConEXG\iSense\device.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">149</span>
-<span class="normal">150</span>
-<span class="normal">151</span>
-<span class="normal">152</span>
-<span class="normal">153</span>
-<span class="normal">154</span>
-<span class="normal">155</span>
-<span class="normal">156</span>
-<span class="normal">157</span>
-<span class="normal">158</span>
-<span class="normal">159</span>
-<span class="normal">160</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_dev_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_dev_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Query device status</span>
 
@@ -1794,17 +1921,17 @@ eeg channels can be updatd by <code>update_channels()</code>.</p>
 </details>
             <details class="quote">
               <summary>Source code in <code>src\eConEXG\iSense\device.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_impedance</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_impedance</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Acquire channel impedances, return immediatly, self.Dev.IMPEDANCE update interval is about 2000ms.</span>
 
@@ -1815,6 +1942,155 @@ eeg channels can be updatd by <code>update_channels()</code>.</p>
 <span class="sd">        - self.Dev.IMPEDANCE: ohm (Ω)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__parser</span><span class="o">.</span><span class="n">impedance</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="eConEXG.iSense.iSense.open_lsl_stream" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">open_lsl_stream</span><span class="p">(</span><span class="n">chs_info</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Open LSL stream, can be invoked after <code>start_acquisition_data()</code>,
+    each frame is the same as described in <code>get_data()</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>chs_info</code>
+            </td>
+            <td>
+                  <code>dict[int, str]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Label the information of channels in LSL Stream</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code>Exception</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>if data acquisition not started or LSL stream already opened.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code>LSLException</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>if LSL stream creation failed.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code>importError</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>if <code>pylsl</code> not installed or liblsl not installed on unix like system.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+            <details class="quote">
+              <summary>Source code in <code>src\eConEXG\iSense\device.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">open_lsl_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chs_info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Open LSL stream, can be invoked after `start_acquisition_data()`,</span>
+<span class="sd">        each frame is the same as described in `get_data()`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        chs_info: Label the information of channels in LSL Stream</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        Exception: if data acquisition not started or LSL stream already opened.</span>
+<span class="sd">        LSLException: if LSL stream creation failed.</span>
+<span class="sd">        importError: if `pylsl` not installed or liblsl not installed on unix like system.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__status</span> <span class="o">!=</span> <span class="n">iSense</span><span class="o">.</span><span class="n">Dev</span><span class="o">.</span><span class="n">SIGNAL</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Data acquisition not started, please start first.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_lsl_stream&quot;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;LSL stream already opened.&quot;</span><span class="p">)</span>
+    <span class="kn">from</span> <span class="nn">..utils.lslWrapper</span> <span class="kn">import</span> <span class="n">lslSender</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">chs_index</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">chs_info</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span> <span class="o">+</span> <span class="p">[</span><span class="mi">136</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_lsl_stream</span> <span class="o">=</span> <span class="n">lslSender</span><span class="p">(</span>
+        <span class="n">chs_info</span><span class="p">,</span>
+        <span class="s2">&quot;iSense&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;BioSignal&quot;</span><span class="p">,</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fs</span><span class="p">,</span>
+        <span class="n">with_trigger</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -1836,19 +2112,19 @@ eeg channels can be updatd by <code>update_channels()</code>.</p>
 
             <details class="quote">
               <summary>Source code in <code>src\eConEXG\iSense\device.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">48</span>
-<span class="normal">49</span>
-<span class="normal">50</span>
-<span class="normal">51</span>
-<span class="normal">52</span>
-<span class="normal">53</span>
-<span class="normal">54</span>
-<span class="normal">55</span>
-<span class="normal">56</span>
-<span class="normal">57</span>
-<span class="normal">58</span>
-<span class="normal">59</span>
-<span class="normal">60</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">start_acquisition_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">start_acquisition_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Send data acquisition command to device, block until data acquisition started or failed.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1882,22 +2158,22 @@ eeg channels can be updatd by <code>update_channels()</code>.</p>
 
             <details class="quote">
               <summary>Source code in <code>src\eConEXG\iSense\device.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">100</span>
-<span class="normal">101</span>
-<span class="normal">102</span>
-<span class="normal">103</span>
-<span class="normal">104</span>
-<span class="normal">105</span>
-<span class="normal">106</span>
-<span class="normal">107</span>
-<span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
-<span class="normal">111</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">111</span>
 <span class="normal">112</span>
 <span class="normal">113</span>
 <span class="normal">114</span>
-<span class="normal">115</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">start_acquisition_impedance</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">start_acquisition_impedance</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Send self.Dev.IMPEDANCE acquisition command to device, block until data acquisition started or failed.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1934,15 +2210,15 @@ eeg channels can be updatd by <code>update_channels()</code>.</p>
 
             <details class="quote">
               <summary>Source code in <code>src\eConEXG\iSense\device.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">90</span>
-<span class="normal">91</span>
-<span class="normal">92</span>
-<span class="normal">93</span>
-<span class="normal">94</span>
-<span class="normal">95</span>
-<span class="normal">96</span>
-<span class="normal">97</span>
-<span class="normal">98</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">stop_acquisition</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">stop_acquisition</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Stop data or self.Dev.IMPEDANCE acquisition, block until data acquisition stopped or failed.</span>
 <span class="sd">    &quot;&quot;&quot;</span>

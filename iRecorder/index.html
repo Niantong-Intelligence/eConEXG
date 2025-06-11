@@ -2180,7 +2180,7 @@
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__with_q</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">__save_data</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
                     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__update_func</span><span class="p">,</span> <span class="n">Callable</span><span class="p">):</span>
-                        <span class="n">ret_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+                        <span class="n">ret_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
                         <span class="k">if</span> <span class="n">ret_array</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">__update_func</span><span class="p">(</span><span class="n">ret_array</span><span class="p">)</span>
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__bdf_flag</span><span class="p">:</span>
