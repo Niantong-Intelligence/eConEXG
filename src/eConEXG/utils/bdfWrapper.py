@@ -96,7 +96,7 @@ class bdfSaverIRecorder(bdfSaver):
                 self._halt_flag.set()
 
 
-class bdfSaverEMG(bdfSaver):
+class bdfSaverEXG(bdfSaver):
     def __init__(self, filename, chs: dict, fs: int, dev_type: str) -> None:
         super().__init__(filename, chs, fs)
         self.chs_len = len(chs)
@@ -126,7 +126,7 @@ class bdfSaverEMG(bdfSaver):
                 self._halt_flag.set()
 
 
-class bdfSaverEMGIMU(bdfSaver):
+class bdfSaverEXGIMU(bdfSaver):
     def __init__(
         self, filename, chs_eeg: dict, fs_eeg: int, chs_imu: dict, fs_imu: int, dev_type: str
     ) -> None:

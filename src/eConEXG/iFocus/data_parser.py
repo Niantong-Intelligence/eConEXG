@@ -5,7 +5,7 @@ from datetime import datetime
 class Parser:
     _byts = 3
     _imu_bytes = 2
-    _ratio = 0.02235174
+    _ratio = 0.02404054
     _imu_ratio = 1 / 100
     _header = 2
 

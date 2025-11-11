@@ -4,9 +4,8 @@ from queue import Queue
 from threading import Thread
 from typing import Optional
 from enum import Enum
-from .iFocusParser import Parser
+from .data_parser import Parser
 from .device_socket import sock
-import traceback
 from copy import deepcopy
 
 
@@ -21,9 +20,9 @@ class iFocus(Thread):
 
     dev_args = {
         "type": "iFocus",
-        "fs_emg": 250,
+        "fs_exg": 250,
         "fs_imu": 50,
-        "channel_emg": {0: "CH0"},
+        "channel_exg": {0: "CH0"},
         "channel_imu": {0: "X", 1: "Y", 2: "Z"},
         "AdapterInfo": "Serial Port",
         "samples_per_packet": 5,  # Number of samples per electrode to be sent in one packet
@@ -55,40 +54,35 @@ class iFocus(Thread):
                 raise e
         self.__status = iFocus.Dev.IDLE_START
         self.__socket_flag = None
-        self._lsl_emg = None
-        self._lsl_imu = None
-        self._lsl_emg_imu = None
         self.__lsl_imu_flag = False
-        self.__lsl_emg_flag = False
-        self.__lsl_emg_imu_flag = False
-        self._bdf_file = None
+        self.__lsl_exg_flag = False
         self.__enable_imu = False
         self.dev_args["name"] = port
         self.start()
 
-    def set_frequency(self, fs_emg: int = None):
+    def set_frequency(self, fs_exg: int = None):
         """
         Change the sampling frequency of iFocus.
 
         Args:
-            fs_emg: sampling frequency of emg data, should be 250 or 500,
-                fs_imu will be automatically set to 1/5 of fs_emg.
+            fs_exg: sampling frequency of exg data, should be 250 or 500,
+                fs_imu will be automatically set to 1/5 of fs_exg.
 
         Raises:
-            ValueError: if fs_emg is not 250 or 500.
+            ValueError: if fs_exg is not 250 or 500.
             NotImplementedError: device firmware too old, not supporting 500Hz.
         """
         if self.__status == iFocus.Dev.SIGNAL:
             raise Exception("Data acquisition already started, please stop first.")
-        if fs_emg is None:
-            fs_emg = self.dev_args["fs_emg"]
-        if fs_emg not in [250, 500]:
-            raise ValueError("fs_emg should be 250 or 500")
-        self.dev_args["fs_emg"] = fs_emg
-        fs_imu = fs_emg // 5
+        if fs_exg is None:
+            fs_exg = self.dev_args["fs_exg"]
+        if fs_exg not in [250, 500]:
+            raise ValueError("fs_exg should be 250 or 500")
+        self.dev_args["fs_exg"] = fs_exg
+        fs_imu = fs_exg // 5
         self.dev_args["fs_imu"] = fs_imu
         if hasattr(self, "dev"):
-            self.dev.set_frequency(fs_emg)
+            self.dev.set_frequency(fs_exg)
 
     def get_dev_info(self) -> dict:
         """
@@ -97,10 +91,10 @@ class iFocus(Thread):
         Returns:
             A dictionary containing device information, which includes:
                 `type`: hardware type;
-                `channel_emg`: channel dictionary, including EMG channel index and name;
+                `channel_exg`: channel dictionary, including EXG channel index and name;
                 `channel_imu`: channel dictionary, including IMU channel index and name;
                 `AdapterInfo`: adapter used for connection;
-                `fs_emg`: sample frequency of EMG in Hz;
+                `fs_exg`: sample frequency of EXG in Hz;
                 `fs_imu`: sample frequency of IMU in Hz;
         """
         return deepcopy(self.dev_args)
@@ -128,15 +122,15 @@ class iFocus(Thread):
             timeout: Non-negative value, blocks at most 'timeout' seconds and return, if set to `None`, blocks until new data available.
 
         Returns:
-            A list of frames, each frame is made up of 5 emg data and 1 imu data in a shape as below:
-                [[`emg_0`], [`emg_1`], [`emg_2`], [`emg_3`], [`emg_4`], [`imu_x`, `imu_y`, `imu_z`]],
+            A list of frames, each frame is made up of 5 exg data and 1 imu data in a shape as below:
+                [[`exg_0`], [`exg_1`], [`exg_2`], [`exg_3`], [`exg_4`], [`imu_x`, `imu_y`, `imu_z`]],
                     in which number `0~4` after `_` indicates the time order of channel data.
 
         Raises:
             Exception: if device not connected, connection failed, data transmission timeout/init failed, or unknown error.
 
         Data Unit:
-            - emg: µV
+            - exg: µV
             - imu: degree(°)
         """
         self.__check_dev_status()
@@ -178,9 +172,9 @@ class iFocus(Thread):
             time.sleep(0.01)
         self.__check_dev_status()
 
-    def open_lsl_emg(self):
+    def open_lsl_exg(self):
         """
-        Open LSL EMG stream, can be invoked after `start_acquisition_data()`.
+        Open LSL EXG stream, can be invoked after `start_acquisition_data()`.
 
         Raises:
             Exception: if data acquisition not started or LSL stream already opened.
@@ -189,36 +183,26 @@ class iFocus(Thread):
         """
         if self.__status != iFocus.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
-        if self._lsl_emg is not None:
+        if hasattr(self, '_lsl_exg'):
             raise Exception("LSL stream already opened.")
         from ..utils.lslWrapper import lslSender
 
-        # Create an expanded channel dictionary for LSL stream creation,
-        # replicating each electrode label 'samples_per_packet' times.
-        expanded_channels = {}
-        current_key = 0
-        for label in self.dev_args["channel_emg"].values():
-            for _ in range(self.dev_args["samples_per_packet"]):
-                expanded_channels[current_key] = label
-                current_key += 1
-
-        # Use the expanded channel dictionary for initializing the LSL stream.
-        self._lsl_emg = lslSender(
-            expanded_channels,  # Expanded channels reflecting samples_per_packet.
-            f"{self.dev_args['type']}EMG{self.dev_args['name'][-2:]}",
-            "EMG",
-            self.dev_args["fs_emg"],
+        self._lsl_exg = lslSender(
+            self.dev_args["channel_exg"],
+            f"{self.dev_args['type']}EXG{self.dev_args['name'][-2:]}",
+            "EXG",
+            self.dev_args["fs_exg"],
             with_trigger=False,
         )
-        self.__lsl_emg_flag = True
+        self.__lsl_exg_flag = True
 
-    def close_lsl_emg(self):
+    def close_lsl_exg(self):
         """
-        Close LSL EMG stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
+        Close LSL EXG stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
         """
-        self.__lsl_emg_flag = False
-        if self._lsl_emg is not None:
-            self._lsl_emg = None
+        self.__lsl_exg_flag = False
+        if hasattr(self, '_lsl_exg'):
+            del self._lsl_exg
 
     def open_lsl_imu(self):
         """
@@ -231,7 +215,7 @@ class iFocus(Thread):
         """
         if self.__status != iFocus.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
-        if self._lsl_imu is not None:
+        if hasattr(self, '_lsl_imu'):
             raise Exception("LSL stream already opened.")
         from ..utils.lslWrapper import lslSender
 
@@ -250,55 +234,8 @@ class iFocus(Thread):
         Close LSL IMU stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
         """
         self.__lsl_imu_flag = False
-        if self._lsl_imu is not None:
-            self._lsl_imu = None
-
-    def open_lsl_emg_imu(self):
-        """
-        Open LSL stream to transmit EMG and IMU simultaneously, can be invoked after `start_acquisition_data()`.
-
-        Raises:
-            Exception: if data acquisition not started or LSL stream already opened.
-            LSLException: if LSL stream creation failed.
-            ImportError: if `pylsl` is not installed or liblsl not installed for unix like system.
-        """
-        if self.__status != iFocus.Dev.SIGNAL:
-            raise Exception("Data acquisition not started, please start first.")
-        if self._lsl_emg_imu is not None:
-            raise Exception("LSL stream already opened.")
-        from ..utils.lslWrapper import lslSender
-
-        key = 0
-        elctds = {}
-        # Expand EMG channels: repeat each EMG electrode label 'samples_per_packet' times.
-        for v in self.dev_args["channel_emg"].values():
-            for _ in range(self.dev_args["samples_per_packet"]):
-                elctds[key] = v
-                key += 1
-        # Add IMU channels as they are (no expansion)
-        for v in self.dev_args["channel_imu"].values():
-            elctds[key] = v
-            key += 1
-
-        self._lsl_emg_imu = lslSender(
-            elctds,
-            f"{self.dev_args['type']}EMG-IMU{self.dev_args['name'][-2:]}",
-            "EMG-IMU",
-            self.dev_args["fs_emg"] + self.dev_args["fs_imu"],
-            unit="degree",
-            with_trigger=False,
-        )
-        # Note: This combined LSL stream now reflects the expanded EMG channels
-        # and original IMU channels, ensuring the packet structure is maintained.
-        self.__lsl_emg_imu_flag = True
-
-    def close_lsl_emg_imu(self):
-        """
-        Close LSL EMG and IMU stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
-        """
-        self.__lsl_emg_imu_flag = False
-        if self._lsl_emg_imu is not None:
-            self._lsl_emg_imu = None
+        if hasattr(self, '_lsl_imu'):
+            del self._lsl_imu
 
     def setIMUFlag(self, check):
         self.__enable_imu = check
@@ -317,26 +254,26 @@ class iFocus(Thread):
         """
         if self.__status != iFocus.Dev.SIGNAL:
             raise Exception("Data acquisition not started")
-        if self._bdf_file is not None:
+        if hasattr(self, '_bdf_file'):
             raise Exception("BDF file already created.")
-        from ..utils.bdfWrapper import bdfSaverEMG, bdfSaverEMGIMU
+        from ..utils.bdfWrapper import bdfSaverEXG, bdfSaverEXGIMU
 
         if filename[-4:].lower() != ".bdf":
             filename += ".bdf"
         if self.__enable_imu:
-            self._bdf_file = bdfSaverEMGIMU(
+            self._bdf_file = bdfSaverEXGIMU(
                 filename,
-                self.dev_args["channel_emg"],
-                self.dev_args["fs_emg"],
+                self.dev_args["channel_exg"],
+                self.dev_args["fs_exg"],
                 self.dev_args["channel_imu"],
                 self.dev_args["fs_imu"],
                 self.dev_args["type"],
             )
         else:
-            self._bdf_file = bdfSaverEMG(
+            self._bdf_file = bdfSaverEXG(
                 filename,
-                self.dev_args["channel_emg"],
-                self.dev_args["fs_emg"],
+                self.dev_args["channel_exg"],
+                self.dev_args["fs_exg"],
                 self.dev_args["type"],
             )
         self.__bdf_flag = True
@@ -346,9 +283,9 @@ class iFocus(Thread):
         Close and save BDF file manually, invoked automatically after `stop_acquisition()` or `close_dev()`
         """
         self.__bdf_flag = False
-        if self._bdf_file is not None:
+        if hasattr(self, '_bdf_file'):
             self._bdf_file.close_bdf()
-            self._bdf_file = None
+            del self._bdf_file
 
     def send_bdf_marker(self, marker: str):
         """
@@ -391,26 +328,20 @@ class iFocus(Thread):
                         self.__save_data.put(ret)
                     if self.__bdf_flag:
                         self._bdf_file.write_chunk(ret)
-                    if self.__lsl_emg_flag:
-                        self._lsl_emg.push_chunk(
+                    if self.__lsl_exg_flag:
+                        self._lsl_exg.push_chunk(
                             [frame for frames in ret for frame in frames[:-1]]
                         )
                     if self.__lsl_imu_flag:
                         self._lsl_imu.push_chunk([frame[-1] for frame in ret])
-                    if self.__lsl_emg_imu_flag:
-                        self._lsl_emg_imu.push_chunk(
-                            [frame for frames in ret for frame in frames[:-1]]
-                            + [frame[-1] for frame in ret]
-                        )
             except Exception as e:
                 print(e)
                 self.__socket_flag = "Data transmission timeout."
                 self.__status = iFocus.Dev.TERMINATE_START
 
         # clear buffer
-        self.close_lsl_emg()
+        self.close_lsl_exg()
         self.close_lsl_imu()
-        self.close_lsl_emg_imu()
         self.close_bdf_file()
         # self.dev.stop_recv()
         self.__parser.clear_buffer()
