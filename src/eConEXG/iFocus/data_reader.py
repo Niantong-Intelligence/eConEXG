@@ -183,7 +183,7 @@ class iFocus(Thread):
         """
         if self.__status != iFocus.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
-        if hasattr(self, '_lsl_exg'):
+        if hasattr(self, "_lsl_exg"):
             raise Exception("LSL stream already opened.")
         from ..utils.lslWrapper import lslSender
 
@@ -201,7 +201,7 @@ class iFocus(Thread):
         Close LSL EXG stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
         """
         self.__lsl_exg_flag = False
-        if hasattr(self, '_lsl_exg'):
+        if hasattr(self, "_lsl_exg"):
             del self._lsl_exg
 
     def open_lsl_imu(self):
@@ -215,7 +215,7 @@ class iFocus(Thread):
         """
         if self.__status != iFocus.Dev.SIGNAL:
             raise Exception("Data acquisition not started, please start first.")
-        if hasattr(self, '_lsl_imu'):
+        if hasattr(self, "_lsl_imu"):
             raise Exception("LSL stream already opened.")
         from ..utils.lslWrapper import lslSender
 
@@ -234,7 +234,7 @@ class iFocus(Thread):
         Close LSL IMU stream manually, invoked automatically after `stop_acquisition()` and `close_dev()`
         """
         self.__lsl_imu_flag = False
-        if hasattr(self, '_lsl_imu'):
+        if hasattr(self, "_lsl_imu"):
             del self._lsl_imu
 
     def setIMUFlag(self, check):
@@ -254,7 +254,7 @@ class iFocus(Thread):
         """
         if self.__status != iFocus.Dev.SIGNAL:
             raise Exception("Data acquisition not started")
-        if hasattr(self, '_bdf_file'):
+        if hasattr(self, "_bdf_file"):
             raise Exception("BDF file already created.")
         from ..utils.bdfWrapper import bdfSaverEXG, bdfSaverEXGIMU
 
@@ -283,7 +283,7 @@ class iFocus(Thread):
         Close and save BDF file manually, invoked automatically after `stop_acquisition()` or `close_dev()`
         """
         self.__bdf_flag = False
-        if hasattr(self, '_bdf_file'):
+        if hasattr(self, "_bdf_file"):
             self._bdf_file.close_bdf()
             del self._bdf_file
 

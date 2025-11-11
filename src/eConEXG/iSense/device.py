@@ -27,7 +27,9 @@ class iSense(Thread):
         print("initing iSense")
         super().__init__(daemon=True)
         if fs not in self.get_available_frequency():
-            raise ValueError("Frequency is unsupported. Available frequencies: 250, 500, 1000, 2000, 4000, 8000, 16000")
+            raise ValueError(
+                "Frequency is unsupported. Available frequencies: 250, 500, 1000, 2000, 4000, 8000, 16000"
+            )
         self.fs = fs
         self.__socket_flag = Queue()
         self.__save_data = Queue()

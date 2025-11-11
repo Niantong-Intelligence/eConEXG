@@ -79,7 +79,7 @@ class wifiWindows(Thread):
                 output = output.decode(locale.getpreferredencoding())
             except Exception as e:
                 print(e)
-                output = output.decode('utf-8')
+                output = output.decode("utf-8")
             for profile in output.split("\r\n\r\n"):
                 if iface.lower() in profile.lower():
                     lines = profile.split("\n")

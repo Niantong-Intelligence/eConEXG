@@ -128,7 +128,13 @@ class bdfSaverEXG(bdfSaver):
 
 class bdfSaverEXGIMU(bdfSaver):
     def __init__(
-        self, filename, chs_eeg: dict, fs_eeg: int, chs_imu: dict, fs_imu: int, dev_type: str
+        self,
+        filename,
+        chs_eeg: dict,
+        fs_eeg: int,
+        chs_imu: dict,
+        fs_imu: int,
+        dev_type: str,
     ) -> None:
         self.fs_eeg = int(fs_eeg)
         self.chs_eeg = [i for i in chs_eeg.keys()]

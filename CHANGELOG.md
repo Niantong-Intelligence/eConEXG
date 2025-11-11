@@ -3,8 +3,12 @@
 This file contains tracks the changes landing in eConEXG. 
 <!-- released start -->
 
+### 0.2.5
+* **Add** Embedded the DFocus SDK to the eConEXG.
+* **Update** Standardize the LSL transmission process of EXG signal devices.
+
 ### 0.2.0
-* **Update** Embedded the iSense SDK to the eConEXG. Improve iSense sample code
+* **Add** Embedded the iSense SDK to the eConEXG. Improve iSense sample code
 * **Add** support for enabling LSL streaming within iSense SDK
 
 ### 0.1.35

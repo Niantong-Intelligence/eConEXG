@@ -25,7 +25,7 @@ class Parser:
             i + self.imu_start for i in range(0, self._imus, self._imu_bytes)
         ]
         self.__pattern = re.compile(
-            b"\xbb\xaa.{%d}" % (self._length-2), flags=re.DOTALL
+            b"\xbb\xaa.{%d}" % (self._length - 2), flags=re.DOTALL
         )
         self.fallof = 1
         self.battery = 0
@@ -44,7 +44,8 @@ class Parser:
         for frame_obj in self.__pattern.finditer(self.__buffer):
             frame = memoryview(frame_obj.group())
             if (
-                frame[self._checksum] != ~sum(frame[self._header: self._checksum]) & 0xFF
+                frame[self._checksum]
+                != ~sum(frame[self._header : self._checksum]) & 0xFF
             ):
                 err = f"|Frame Checksum invalid, packet dropped{datetime.now()}\n|Current:{frame.hex()}"
                 print(err)
@@ -62,12 +63,14 @@ class Parser:
                         frame[i : i + self._byts],
                         signed=True,
                         byteorder="big",
-                    ) * self._ratio,
+                    )
+                    * self._ratio,
                     int.from_bytes(
-                        frame[i + 15: i + 15 + self._byts],
+                        frame[i + 15 : i + 15 + self._byts],
                         signed=True,
                         byteorder="big",
-                    ) * self._ratio
+                    )
+                    * self._ratio,
                 ]
                 for i in self.eeg_idx
             ]
